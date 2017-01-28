@@ -8,6 +8,7 @@ import os
 import psycopg2
 import urlparse3
 
+mid_bot = Bot(command_prefix="!")
 urllib.uses_netloc.append("postgres")
 url = urllib.urlparse(os.environ["postgres://vppudcomfsevnd:bfbfe939ccd4505078be77bbc439bfce1b38d9e925ecd9d47fa18884c740b3e9@ec2-54-163-246-165.compute-1.amazonaws.com:5432/d4nsuj4jjqjaui"])
 
