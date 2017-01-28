@@ -7,7 +7,7 @@ import LeagueStats
 import os
 import psycopg2
 
-import urllib.parse
+import urllib
 
 mid_bot = Bot(command_prefix="!")
 urllib.uses_netloc.append("postgres")
