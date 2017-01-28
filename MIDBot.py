@@ -16,7 +16,7 @@ proc = subprocess.Popen('heroku config:get postgres://vppudcomfsevnd:bfbfe939ccd
 db_url = proc.stdout.read().decode('utf-8').strip()
 
 
-conn = psycopg2.connect(db_url)
+conn = psycopg2.connect('postgres://vppudcomfsevnd:bfbfe939ccd4505078be77bbc439bfce1b38d9e925ecd9d47fa18884c740b3e9@ec2-54-163-246-165.compute-1.amazonaws.com:5432/d4nsuj4jjqjaui')
 # conn = psycopg2.connect(
 #     database=url.path[1:],
 #     user=url.username,
