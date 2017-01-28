@@ -4,8 +4,20 @@ from discord.ext.commands import Bot
 import botinfo
 import LeagueStats
 
-mid_bot = Bot(command_prefix="!")
-# conn = psycopg2.connect("dbname='FantasyLCS' user='postgres' host='localhost' password='password'")
+import os
+import psycopg2
+import urlparse
+
+urlparse.uses_netloc.append("postgres")
+url = urlparse.urlparse(os.environ["postgres://vppudcomfsevnd:bfbfe939ccd4505078be77bbc439bfce1b38d9e925ecd9d47fa18884c740b3e9@ec2-54-163-246-165.compute-1.amazonaws.com:5432/d4nsuj4jjqjaui"])
+
+conn = psycopg2.connect(
+    database=url.path[1:],
+    user=url.username,
+    password=url.password,
+    host=url.hostname,
+    port=url.port
+)
 
 @mid_bot.event
 async def on_read():
