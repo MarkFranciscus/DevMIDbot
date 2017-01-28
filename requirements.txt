@@ -3,4 +3,5 @@ aiohttp
 websockets
 chardet
 psycopg2
+urlparse
 cassiopeia
