@@ -1,0 +1,5 @@
+discord.py==0.16.3
+aiohttp
+websockets
+chardet
+cassiopeia
