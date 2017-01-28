@@ -50,6 +50,8 @@ async def ranking(*args):
 async def setup(ctx, member: discord.Member = None):
     if member is None:
         member = ctx.message.author
+    print(member)
+    print(ctx.message)
 
 
 
