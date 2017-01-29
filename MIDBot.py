@@ -79,7 +79,7 @@ async def predict(ctx, *args):
     print(len(args))
     username = ctx.message.author
     print(username)
-    if args == 10:
+    if len(args) == 10:
         sql = "INSERT INTO ranking VALUES ('" + str(username) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] + "');"
         print(sql)
         try:
