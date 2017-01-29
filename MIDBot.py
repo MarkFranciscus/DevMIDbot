@@ -67,7 +67,7 @@ async def setup(ctx, *args):
         cur.execute(sql)
         rows = cur.fetchall()
         for row in rows:
-            print("   ", row[1][1])
+            print("                                                                    ", row)
     except:
         print("didnt select")
 
