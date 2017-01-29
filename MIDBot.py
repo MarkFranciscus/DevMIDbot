@@ -25,7 +25,7 @@ conn = psycopg2.connect('postgres://vppudcomfsevnd:bfbfe939ccd4505078be77bbc439b
 #     port=url.port
 # )
 
-
+cur = conn.cursor()
 
 @mid_bot.event
 async def on_read():
@@ -52,6 +52,7 @@ async def setup(ctx, *args):
     print(member)
     print(ctx.message)
     print(args)
+    print("INSERT INTO DiscordInfo VALUES (" + member + ", " + args[0])
 
 
 
