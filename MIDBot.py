@@ -76,12 +76,24 @@ async def predict(ctx, *args):
     print(args)
     username = ctx.message.author
     print(username)
-    try:
-        if args == 10:
-            sql = "INSERT INTO ranking VALUES ('" + str(username) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] + "');"
-            print(sql)
-        else:
-            print("Please have 10 teams")
-    except:
-        print ("didn't insert")
+
+    if args == 10:
+        sql = "INSERT INTO ranking VALUES ('" + str(username) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] + "');"
+        print(sql)
+        try:
+            print (cur.execute(sql))
+            try:
+                sql = "select * from ranking;"
+                cur.execute(sql)
+                rows = cur.fetchall()
+                for row in rows:
+                    print("                                            ", row)
+            except:
+                print("didnt select")
+        except:
+            print("failed to insert")
+    else:
+        print("Please list 10 teams")
+
+        
 mid_bot.run(botinfo.BOT_TOKEN)
