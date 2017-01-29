@@ -59,24 +59,25 @@ async def setup(ctx, *args):
         sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');"
         print((sql))
         print(cur.execute(sql))
+        try:
+            sql = "select * from discordinfo;"
+            cur.execute(sql)
+            rows = cur.fetchall()
+            for row in rows:
+                print("                                            ", row)
+        except:
+            print("didnt select")
+        return await mid_bot.say("Tied @" + str(member) + " to " + args[0])
         # print(cur.fetchall)
     except:
         print("didn't insert")
-    try:
-        sql = "select * from discordinfo;"
-        cur.execute(sql)
-        rows = cur.fetchall()
-        for row in rows:
-            print("                                            ", row)
-    except:
-        print("didnt select")
+
 
 @mid_bot.command(pass_context=True)
 async def predict(ctx, *args):
     print(args)
     username = ctx.message.author
     print(username)
-
     if args == 10:
         sql = "INSERT INTO ranking VALUES ('" + str(username) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] + "');"
         print(sql)
@@ -88,12 +89,13 @@ async def predict(ctx, *args):
                 rows = cur.fetchall()
                 for row in rows:
                     print("                                            ", row)
+                return await mid_bot.say("Stored @" + str(username) + "'s prediction")
             except:
                 print("didnt select")
         except:
             print("failed to insert")
     else:
-        print("Please list 10 teams")
+        return await mid_bot.say("Please list 10 teams")
 
-        
+
 mid_bot.run(botinfo.BOT_TOKEN)
