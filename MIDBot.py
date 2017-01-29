@@ -67,8 +67,16 @@ async def setup(ctx, *args):
         cur.execute(sql)
         rows = cur.fetchall()
         for row in rows:
-            print("                                                                    ", row)
+            print("                                            ", row)
     except:
         print("didnt select")
+
+@mid_bot.command(pass_context=True)
+async def predict(ctx, *args):
+    member = ctx.message.author
+    if len(args) == 10:
+        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] "');"
+    else:
+        print("Please have 10 teams")
 
 mid_bot.run(botinfo.BOT_TOKEN)
