@@ -47,9 +47,8 @@ async def ranking(*args):
         print(args)
 
 @mid_bot.command(pass_context=True)
-async def setup(ctx, member: discord.Member = None, *args):
-    if member is None:
-        member = ctx.message.author
+async def setup(ctx, *args):
+    member = ctx.message.author
     print(member)
     print(ctx.message)
     print(args)
