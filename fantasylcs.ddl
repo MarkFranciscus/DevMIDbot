@@ -2,14 +2,14 @@ drop table if exists Ranking;
 drop table if exists DiscordInfo;
 
 create table DiscordInfo (
-	discordName varchar NOT NULL,
-	Summoner varchar unique, 
-	primary key (discordName)
+	discordName CHAR(100) NOT NULL,
+	Summoner CHAR(100) NOT NULL UNIQUE, 
+	primary key (discordName, Summoner)
 );
 
 
 create table Ranking (
-	username varchar NOT NULL REFERENCES DiscordInfo(Summoner),
+	username CHAR(100) NOT NULL REFERENCES DiscordInfo(Summoner),
 	one varchar NOT NULL,
 	two varchar NOT NULL,
 	three varchar NOT NULL,
@@ -19,7 +19,8 @@ create table Ranking (
 	seven varchar NOT NULL,
 	eight varchar NOT NULL,
 	nine varchar NOT NULL,
-	ten varchar NOT NULL
+	ten varchar NOT NULL,
+	primary key (username)
 );
 
 select * from ranking, DiscordInfo;

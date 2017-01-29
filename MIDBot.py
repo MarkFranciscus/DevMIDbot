@@ -52,8 +52,10 @@ async def setup(ctx, *args):
     print(member)
     print(ctx.message)
     print(args)
-    cur.execute("INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');")
-
+    try:
+        cur.execute("INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');")
+    except:
+        print("didn't insert")
 
 
 mid_bot.run(botinfo.BOT_TOKEN)
