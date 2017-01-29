@@ -57,14 +57,17 @@ async def setup(ctx, *args):
     print(args)
     try:
         sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + ", '" + args[0] + "');"
+        print((sql))
         cur.execute(sql)
+    except:
+        print("didn't insert")
+    try:
         sql = "select * from discordinfo;"
         cur.execute(sql)
         rows = cur.fetchall()
         for row in rows:
-            print ("   ", row[1][1])
+            print("   ", row[1][1])
     except:
-        print("didn't insert")
-
+        print("didnt select")
 
 mid_bot.run(botinfo.BOT_TOKEN)
