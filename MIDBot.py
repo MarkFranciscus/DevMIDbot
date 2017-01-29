@@ -66,7 +66,7 @@ async def setup(ctx, *args):
             cur.execute(sql)
             rows = cur.fetchall()
             for row in rows:
-                print("                                            ", row)
+                print(row)
         except:
             print("didnt select")
         return await mid_bot.say("Tied @" + str(member) + " to " + args[0])
@@ -100,5 +100,15 @@ async def predict(ctx, *args):
     else:
         return await mid_bot.say("Please list 10 teams")
 
+@mid_bot.command()
+async def fantasy():
+    try:
+        sql = "select * from ranking;"
+        cur.execute(sql)
+        rows = cur.fetchall()
+        for row in rows:
+            print(row)
+    except:
+        print("didnt select")
 
 mid_bot.run(botinfo.BOT_TOKEN)
