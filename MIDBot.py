@@ -17,6 +17,7 @@ mid_bot = Bot(command_prefix="!")
 
 try:
     conn = psycopg2.connect("dbname='d4nsuj4jjqjaui' user='vppudcomfsevnd' host='ec2-54-163-246-165.compute-1.amazonaws.com' password='bfbfe939ccd4505078be77bbc439bfce1b38d9e925ecd9d47fa18884c740b3e9'")
+    conn.autocommit = True
 except:
     print ("didn't connect")
 # conn = psycopg2.connect('postgres://vppudcomfsevnd:bfbfe939ccd4505078be77bbc439bfce1b38d9e925ecd9d47fa18884c740b3e9@ec2-54-163-246-165.compute-1.amazonaws.com:5432/d4nsuj4jjqjaui')
@@ -45,6 +46,7 @@ async def shitter(*args):
 @mid_bot.command()
 async def last10(*args):
     return await mid_bot.say((LeagueStats.last10Games(args[0])))
+
 @mid_bot.command()
 async def ranking(*args):
         print(args)
@@ -57,7 +59,7 @@ async def setup(ctx, *args):
     print(args)
     try:
         sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');"
-        print((sql))
+        print(sql)
         print(cur.execute(sql))
         try:
             sql = "select * from discordinfo;"
