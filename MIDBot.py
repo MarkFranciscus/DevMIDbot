@@ -76,6 +76,7 @@ async def setup(ctx, *args):
 @mid_bot.command(pass_context=True)
 async def predict(ctx, *args):
     print(args)
+    print(len(args))
     username = ctx.message.author
     print(username)
     if args == 10:
