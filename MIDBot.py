@@ -54,8 +54,9 @@ async def setup(ctx, *args):
     print(ctx.message)
     print(args)
     try:
-        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');"
-        cur.execute(sql)
+        # sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + ", '" + args[0] + "');"
+        sql = "select * from discordinfo;"
+        print(cur.execute(sql))
     except:
         print("didn't insert")
 
