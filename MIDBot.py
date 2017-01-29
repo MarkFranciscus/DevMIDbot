@@ -52,7 +52,7 @@ async def setup(ctx, *args):
     print(member)
     print(ctx.message)
     print(args)
-    cur.execute("INSERT INTO DiscordInfo VALUES (" + str(member) + ", " + args[0] + ")")
+    cur.execute("INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');")
 
 
 
