@@ -73,10 +73,15 @@ async def setup(ctx, *args):
 
 @mid_bot.command(pass_context=True)
 async def predict(ctx, *args):
-    member = ctx.message.author
-    if len(args) == 10:
-        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] "');"
-    else:
-        print("Please have 10 teams")
-
+    print(args)
+    username = ctx.message.author
+    print(username)
+    try:
+        if args == 10:
+            sql = "INSERT INTO ranking VALUES ('" + str(username) + "', '" + args[0] + "', '" + args[1] + "', '" + args[2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + args[8] + "', '" + args[9] + "');"
+            print(sql)
+        else:
+            print("Please have 10 teams")
+    except:
+        print ("didn't insert")
 mid_bot.run(botinfo.BOT_TOKEN)
