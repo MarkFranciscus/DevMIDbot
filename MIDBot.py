@@ -114,7 +114,7 @@ async def fantasy():
         except:
             print("didnt fetch")
         for row in rows:
-            result += str(row)
+            result += str(row) + "\n"
         return await mid_bot.say(result)
 
 
