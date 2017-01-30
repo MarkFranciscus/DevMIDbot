@@ -55,6 +55,7 @@ async def last10(ctx, *args):
             print("failed to find username")
         try:
             username = cur.fetchall()
+            print(username[0])
             return await mid_bot.say(LeagueStats.last10Games(str(username[0])))
         except:
             print("failed to fetch username")
