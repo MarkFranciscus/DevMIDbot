@@ -43,9 +43,23 @@ async def hello(*args):
 async def shitter(*args):
     return await mid_bot.say(LeagueStats.shitter())
 
-@mid_bot.command()
-async def last10(*args):
-    return await mid_bot.say((LeagueStats.last10Games(args[0])))
+@mid_bot.command(pass_context=True)
+async def last10(ctx, *args):
+    if len(args) == 1:
+        return await mid_bot.say((LeagueStats.last10Games(args[0])))
+    elif len(args) == 0:
+        sql = "select summoner from discordinfo where summoner = " +  str(ctx.message.author) + ";"
+        try:
+            cur.execute(sql)
+        except:
+            print("failed to find username")
+        try:
+            username = cur.fetchall()
+            return await mid_bot.say(LeagueStats.last10Games(str(username[0])))
+        except:
+            print("failed to fetch username")
+    else:
+        return await mid_bot.say("Too many parameters")
 
 @mid_bot.command()
 async def ranking(*args):
