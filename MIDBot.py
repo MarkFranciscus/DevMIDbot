@@ -120,15 +120,15 @@ async def fantasy():
 
 @mid_bot.command()
 async def commands():
-    commands = """List of commands : \n\n\n
+    commands = """List of commands : \n
                   !setup <League of Legends Summoner Name> \n
-                  \t - Ties your discord account to your League of Legends account \n\n
+                  \t - Ties your discord account to your League of Legends account \n
                   !shitter \n
-                  \t - Outs the shitter of the sever \n\n
+                  \t - Outs the shitter of the sever \n
                   !last10 <League of Legends Summoner Name> \n
-                  \t - Win - Loss of the most recent 10 games of a League of Legends account \n\n
+                  \t - Win - Loss of the most recent 10 games of a League of Legends account \n
                   !predict <team> <team> <team> <team> <team> <team> <team> <team> <team> <team> \n
-                  \t - Stores LCS prediction \n\n
+                  \t - Stores LCS prediction \n
                   !fantasy \n
                   \t - Displays all LCS predictions
                   !commands \n
