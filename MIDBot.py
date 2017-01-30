@@ -111,11 +111,31 @@ async def fantasy():
             print("didnt select")
         try:
             rows = cur.fetchall()
+            for row in rows:
+                result += str(row) + "\n"
         except:
             print("didnt fetch")
-        for row in rows:
-            result += str(row) + "\n"
+
         return await mid_bot.say(result)
+
+@mid_bot.command()
+async def commands():
+    commands = """List of commands : \n\n\n
+                  !setup <League of Legends Summoner Name> \n
+                  \t - Ties your discord account to your League of Legends account \n\n
+                  !shitter \n
+                  \t - Outs the shitter of the sever \n\n
+                  !last10 <League of Legends Summoner Name> \n
+                  \t - Win - Loss of the most recent 10 games of a League of Legends account \n\n
+                  !predict <team> <team> <team> <team> <team> <team> <team> <team> <team> <team> \n
+                  \t - Stores LCS prediction \n\n
+                  !fantasy \n
+                  \t - Displays all LCS predictions
+                  !commands \n
+                  \t - Lists all possible commands
+               """
+    return await mid_bot.say(commands)
+
 
 
 mid_bot.run(botinfo.BOT_TOKEN)
