@@ -107,7 +107,7 @@ async def fantasy():
         cur.execute(sql)
         rows = cur.fetchall()
         for row in rows:
-            print(row)
+            mid_bot.say(row)
     except:
         print("didnt select")
 
