@@ -121,17 +121,17 @@ async def fantasy():
 @mid_bot.command()
 async def commands():
     commands = """List of commands : \n
-                  !setup <League of Legends Summoner Name> \n
+                  !setup <League of Legends Summoner Name>
                   \t - Ties your discord account to your League of Legends account \n
-                  !shitter \n
+                  !shitter
                   \t - Outs the shitter of the sever \n
-                  !last10 <League of Legends Summoner Name> \n
+                  !last10 <League of Legends Summoner Name>
                   \t - Win - Loss of the most recent 10 games of a League of Legends account \n
-                  !predict <team> <team> <team> <team> <team> <team> <team> <team> <team> <team> \n
+                  !predict <team> <team> <team> <team> <team> <team> <team> <team> <team> <team>
                   \t - Stores LCS prediction \n
-                  !fantasy \n
-                  \t - Displays all LCS predictions
-                  !commands \n
+                  !fantasy
+                  \t - Displays all LCS predictions \n
+                  !commands
                   \t - Lists all possible commands
                """
     return await mid_bot.say(commands)
