@@ -109,6 +109,7 @@ async def fantasy():
         rows = cur.fetchall()
         for row in rows:
             result += mid_bot.say(row)
+        return await mid_bot.say(result)
     except:
         print("didnt select")
 
