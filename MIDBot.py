@@ -103,11 +103,12 @@ async def predict(ctx, *args):
 @mid_bot.command()
 async def fantasy():
     try:
+        result = ""
         sql = "select * from ranking;"
         cur.execute(sql)
         rows = cur.fetchall()
         for row in rows:
-            mid_bot.say(row)
+            result += mid_bot.say(row)
     except:
         print("didnt select")
 
