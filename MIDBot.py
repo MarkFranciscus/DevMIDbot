@@ -48,7 +48,7 @@ async def last10(ctx, *args):
     if len(args) == 1:
         return await mid_bot.say((LeagueStats.last10Games(args[0])))
     elif len(args) == 0:
-        sql = "select summoner from discordinfo where discordName = " +  str(ctx.message.author) + ";"
+        sql = "select * from discordinfo where discordName = " +  str(ctx.message.author) + ";"
         try:
             cur.execute(sql)
         except:
@@ -118,18 +118,22 @@ async def predict(ctx, *args):
 @mid_bot.command()
 async def fantasy():
 
-        result = ""
+        result = "                 |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10  |"
         sql = "select * from ranking;"
         try:
             cur.execute(sql)
         except:
             print("didnt select")
         try:
+
             rows = cur.fetchall()
             for row in rows:
-                result += str(row) + "\n"
+                for item in row:
+                    result += item
+                result += "\n"
+
         except:
-            print("didnt fetch")
+            print("didn't fetch")
 
         return await mid_bot.say(result)
 
