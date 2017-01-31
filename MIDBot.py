@@ -118,7 +118,7 @@ async def predict(ctx, *args):
 @mid_bot.command()
 async def fantasy():
 
-        result = "\n                   |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10  \n"
+        result = "\n\n\t\t\t\t                   |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10  \n"
         sql = "select * from ranking;"
         try:
             cur.execute(sql)
@@ -130,7 +130,7 @@ async def fantasy():
             for row in rows:
                 for item in row:
                     if len(item) > 3:
-                        result += item[:15] + " |"
+                        result += item[:18] + " |"
 
                 result += "\n"
 
