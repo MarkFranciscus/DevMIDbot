@@ -48,7 +48,7 @@ async def last10(ctx, *args):
     if len(args) == 1:
         return await mid_bot.say((LeagueStats.last10Games(args[0])))
     elif len(args) == 0:
-        sql = "select * from discordinfo where discordName='" + str(ctx.message.author) + "';"
+        sql = "select summoner from discordinfo where discordName='" + str(ctx.message.author) + "';"
         print(sql)
         try:
             cur.execute(sql)
