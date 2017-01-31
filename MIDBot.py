@@ -161,7 +161,7 @@ async def commands():
 
 @mid_bot.command()
 async def fuckyou():
-    mid_bot.say("Fuck you ivan")
+    return await mid_bot.say("Fuck you ivan")
 
 
 mid_bot.run(botinfo.BOT_TOKEN)
