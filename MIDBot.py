@@ -37,7 +37,7 @@ async def on_read():
 
 @mid_bot.command()
 async def hello(*args):
-        return await mid_bot.say("Hello world!")
+    return await mid_bot.say("Hello world!")
 
 @mid_bot.command()
 async def shitter(*args):
@@ -48,7 +48,7 @@ async def last10(ctx, *args):
     if len(args) == 1:
         return await mid_bot.say((LeagueStats.last10Games(args[0])))
     elif len(args) == 0:
-        sql = "select * from discordinfo where discordName = " +  str(ctx.message.author) + ";"
+        sql = "select * from discordinfo where discordName = '" + str(ctx.message.author) + "';"
         try:
             cur.execute(sql)
         except:
