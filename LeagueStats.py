@@ -33,21 +33,27 @@ def last10Games(username):
     loss = 0
     for match_reference in summoner.match_list():
         match = riotapi.get_match(match_reference)
+        print(match.data.queueType)
         if match.data.queueType == 'RANKED_FLEX_SR' or match.data.queueType == 'TEAM_BUILDER_RANKED_SOLO':
             summonerFound = False
             for participant in match.blue_team.participants:
                if participant.summoner == summoner:
+                   summonerFound = True
                    if match.blue_team.win:
                        win +=1
-                       summonerFound = True
+                       print("win " + str(win))
+
                        break;
                    else:
                         loss +=1
             if not summonerFound and match.blue_team.win:
                 loss += 1
+                print ("lose " + str(loss))
+            if not summonerFound and match.red_team.win:
+                win +=1
         # if match.queue == 'flex':
+        print
         if win + loss >= 10:
             break
     return username + " is " + (str(win) + " - " + str(loss))
-# def elo(username):
-shitter()
+# def elo(username);
