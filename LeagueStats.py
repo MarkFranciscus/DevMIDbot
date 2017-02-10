@@ -51,6 +51,8 @@ def last10Games(username):
                    #      loss +=1
             if not summonerFound and match.blue_team.win:
                 loss += 1
+            elif summonerFound and not match.blue_team.win:
+                loss += 1
             else:
                 win += 1
             print("win " + str(win) + ", lose " + str(loss))
