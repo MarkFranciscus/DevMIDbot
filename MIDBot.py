@@ -108,7 +108,7 @@ async def predict(ctx, *args):
 @mid_bot.command()
 async def fantasy():
 
-        result = "Fantasy Predictions \n\n\t\t\t\t\t|  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10  \n"
+        result = "Fantasy Predictions \n\n\t\t\t\t\t\t\t\t\t\t\t\t|  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10  \n"
         sql = "select * from ranking;"
         try:
             cur.execute(sql)
@@ -149,10 +149,6 @@ async def commands():
 
 
     return await mid_bot.say(commands)
-
-@mid_bot.command()
-async def fuckyou():
-    return await mid_bot.say("Fuck you ivan")
 
 
 mid_bot.run(botinfo.BOT_TOKEN)
