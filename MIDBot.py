@@ -113,7 +113,7 @@ async def fantasy():
         try:
             cur.execute(sql)
         except:
-            print("didnt select")
+            print("didn'    t select")
         try:
 
             rows = cur.fetchall()
