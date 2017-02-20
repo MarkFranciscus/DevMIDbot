@@ -122,7 +122,7 @@ async def fantasy():
                     if len(item) > 3:
                         result += item[:25] + " |"
                     else :
-                        result += p
+                        result += item + "|"
                 result += "\n"
 
         except:

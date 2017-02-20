@@ -60,5 +60,5 @@ def last10Games(username):
             #     win +=1
         # if match.queue == 'flex':
 # def elo(username);
-
-last10Games("rythemkiller")
+#
+# last10Games("rythemkiller")
