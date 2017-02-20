@@ -120,9 +120,11 @@ async def fantasy():
             for row in rows:
                 for item in row:
                     if len(item) > 3:
-                        result += item[:25] + " |"
-                    else :
+                        result += item[:25] + " | "
+                    elif len(item) == 3:
                         result += item + " | "
+                    else :
+                        result += item + "  | "
                 result += "\n"
 
         except:
