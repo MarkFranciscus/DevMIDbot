@@ -26,11 +26,12 @@ async def on_read():
 
 @mid_bot.command()
 async def hello(*args):
-    strtest = ""
+    strtest = "```"
     for i in range(10):
         strtest += str(i) + "     "
         strtest += "x\n"
     print(strtest)
+    strtest += '```'
     return await mid_bot.say(strtest)
 
 @mid_bot.command()
