@@ -9,19 +9,28 @@ numberToTier = {0: 'bronze', 1: 'silver', 2: 'gold', 3: 'platinum', 4: 'diamond'
 divisionToNumber = {'five': 0, 'four': 1, 'three': 2, 'two': 3, 'one':4}
 numberToDivision = {0:'five', 1:'four',2:'three',3:'two',4:'one'}
 
-def shitter():
+def shitter(usernames):
     summoner1 = riotapi.get_summoner_by_name("rythemkiller")
     summoner2 = riotapi.get_summoner_by_name("courageousfalcon")
     summoner3 = riotapi.get_summoner_by_name("flailure")
 
     # print("{name} is a level {level} summoner on the NA server.".format(name=summoner.name, level=summoner.level))
+    eloList = []
+    for user in usernames:
+        currentuser = riotapi.get_league_entries_by_summoner(summoners=user)
+        if len(eloList) == 0:
+            eloList.append([tierToNumber[str(currentuser[1].tier)[5:]], divisionToNumber[str(currentuser[1].entries[0].division)[9:]], currentuser[1].entries[0].league_points, currentuser[1].entries[0].summoner])
+        else:
+            eloList.append([tierToNumber[str(currentuser[1].tier)[5:]], divisionToNumber[str(currentuser[1].entries[0].division)[9:]], currentuser[1].entries[0].league_points, currentuser[1].entries[0].summoner])
+            eloList = (sorted(eloList, key=itemgetter(0, 1, 2)))
+            eloList.pop()
 
-    mark = riotapi.get_league_entries_by_summoner(summoners=summoner1)
-    ivan = riotapi.get_league_entries_by_summoner(summoners=summoner2)
-    daniel = riotapi.get_league_entries_by_summoner(summoners=summoner3)
+    # mark = riotapi.get_league_entries_by_summoner(summoners=summoner1)
+    # ivan = riotapi.get_league_entries_by_summoner(summoners=summoner2)
+    # daniel = riotapi.get_league_entries_by_summoner(summoners=summoner3)
 
-    eloList = [[tierToNumber[str(mark[1].tier)[5:]], divisionToNumber[str(mark[1].entries[0].division)[9:]], mark[1].entries[0].league_points, mark[1].entries[0].summoner], [tierToNumber[str(ivan[1].tier)[5:]], divisionToNumber[str(ivan[1].entries[0].division)[9:]], ivan[1].entries[0].league_points, ivan[1].entries[0].summoner], [tierToNumber[str(daniel[1].tier)[5:]], divisionToNumber[str(daniel[1].entries[0].division)[9:]], daniel[1].entries[0].league_points, daniel[1].entries[0].summoner]]
-    eloList = (sorted(eloList, key=itemgetter(0, 1, 2)))
+    # eloList = [[tierToNumber[str(mark[1].tier)[5:]], divisionToNumber[str(mark[1].entries[0].division)[9:]], mark[1].entries[0].league_points, mark[1].entries[0].summoner], [tierToNumber[str(ivan[1].tier)[5:]], divisionToNumber[str(ivan[1].entries[0].division)[9:]], ivan[1].entries[0].league_points, ivan[1].entries[0].summoner], [tierToNumber[str(daniel[1].tier)[5:]], divisionToNumber[str(daniel[1].entries[0].division)[9:]], daniel[1].entries[0].league_points, daniel[1].entries[0].summoner]]
+
 
     return str(eloList[0][3].name) + " is the shitter - " + str( numberToTier[eloList[0][0]]) + " " + str(numberToDivision[eloList[0][1]]) + " " + str(eloList[0][2]) + " LP"
 

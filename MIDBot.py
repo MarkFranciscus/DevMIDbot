@@ -36,7 +36,16 @@ async def hello(*args):
 
 @mid_bot.command()
 async def shitter(*args):
-    return await mid_bot.say(LeagueStats.shitter())
+    sql = "select summoner from discordinfo"
+    try:
+        cur.execute(sql)
+    except:
+        print("failed to find username")
+    try:
+        usernames = cur.fetchall()
+    except:
+        print("failed to fetch usernames")
+    return await mid_bot.say(LeagueStats.shitter(usernames))
 
 @mid_bot.command(pass_context=True)
 async def last10(ctx, *args):
@@ -125,15 +134,18 @@ async def fantasy():
         try:
 
             rows = cur.fetchall()
-            for row in rows:
-                for item in row:
+            for i in range(len(rows)):
+                for item in rows[i]:
                     if len(item) > 3:
                         result += item[:23] + " | "
                     elif len(item) == 3:
                         result += item + " | "
                     else :
                         result += item + "  | "
-                result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
+                if i < len(rows) - 1:
+                    result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
+                else:
+                    result += "\n------------------------------------------------------------------------------------|\n"
 
 
         except:
