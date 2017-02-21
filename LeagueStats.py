@@ -1,5 +1,7 @@
 from cassiopeia import riotapi
 from operator import itemgetter
+import botinfo
+
 
 riotapi.set_region(botinfo.region)
 riotapi.set_api_key(botinfo.riotkey)
