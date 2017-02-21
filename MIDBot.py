@@ -133,7 +133,7 @@ async def fantasy():
                         result += item + " | "
                     else :
                         result += item + "  | "
-                result += "\n"
+                result += "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
 
         except:
             print("didn't fetch")
