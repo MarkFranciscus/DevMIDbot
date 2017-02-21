@@ -27,15 +27,15 @@ async def on_read():
 @mid_bot.command(pass_context=True)
 async def test(ctx, *args):
     strtest = "```"
-    for i in range(10):
-        strtest += str(ctx.message.server.id)
+    # for i in range(10):
+    strtest += str(ctx.message.server.id)
     print(strtest)
     strtest += '```'
     return await mid_bot.say(strtest)
 
-@mid_bot.command()
-async def shitter(*args):
-    sql = "select summoner from discordinfo"
+@mid_bot.command(pass_context=True)
+async def shitter(ctx, *args):
+    sql = "select summoner from discordinfo where serverID='" + str(ctx.message.server.id) + "';"
     try:
         cur.execute(sql)
     except:
@@ -51,7 +51,7 @@ async def last10(ctx, *args):
     if len(args) == 1:
         return await mid_bot.say((LeagueStats.last10Games(args[0])))
     elif len(args) == 0:
-        sql = "select summoner from discordinfo where discordName='" + str(ctx.message.author) + "';"
+        sql = "select summoner from discordinfo where discordName='" + str(ctx.message.author) + "' and serverID='" + str(ctx.message.server.id) + "';"
         print(sql)
         try:
             cur.execute(sql)
@@ -77,7 +77,7 @@ async def setup(ctx, *args):
     print(ctx.message)
     print(args)
     try:
-        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "');"
+        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + ctx.message.server +");"
         print(sql)
         print(cur.execute(sql))
         try:
