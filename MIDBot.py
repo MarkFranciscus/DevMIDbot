@@ -31,6 +31,7 @@ async def hello(*args):
         strtest += str(i) + ""
         strtest.ljust(10)
         strtest += "x\n"
+    print(strtest)
     return await mid_bot.say(strtest)
 
 @mid_bot.command()
