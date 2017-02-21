@@ -26,7 +26,12 @@ async def on_read():
 
 @mid_bot.command()
 async def hello(*args):
-    return await mid_bot.say("Hello world!")
+    strtest = ""
+    for i in range(10):
+        strtest += i + ""
+        strtest.ljust(10)
+        strtest += "\n"
+    return await mid_bot.say(strtest)
 
 @mid_bot.command()
 async def shitter(*args):
@@ -108,12 +113,12 @@ async def predict(ctx, *args):
 @mid_bot.command()
 async def fantasy():
 
-        result = "Fantasy Predictions \n\n\t\t\t\t\t\t\t\t\t\t\t  |   1   |   2   |   3   |   4   |   5   |   6   |   7   |   8   |   9   |   10   \n"
+        result = "Fantasy Predictions \n\n\t\t\t\t\t\t\t\t\t\t\t  |\t1\t|\t2/t|\t3\t|   4   |   5   |   6   |   7   |   8   |   9   |   10   \n"
         sql = "select * from ranking;"
         try:
             cur.execute(sql)
         except:
-            print("didn'    t select")
+            print("didn't select")
         try:
 
             rows = cur.fetchall()
