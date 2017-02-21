@@ -28,7 +28,7 @@ async def on_read():
 async def test(ctx, *args):
     strtest = "```"
     for i in range(10):
-        strtest += str(ctx.message.server)
+        strtest += str(ctx.message.server.id)
     print(strtest)
     strtest += '```'
     return await mid_bot.say(strtest)
