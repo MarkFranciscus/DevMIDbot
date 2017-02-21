@@ -18,7 +18,8 @@ def shitter(usernames):
     print(usernames)
     eloList = []
     for user in usernames:
-        newSummoner = riotapi.get_summoner_by_name(user)
+        print(user.trim())
+        newSummoner = riotapi.get_summoner_by_name(user.trim())
         currentUser = riotapi.get_league_entries_by_summoner(summoners=newSummoner)
         if len(eloList) == 0:
             eloList.append([tierToNumber[str(currentUser[1].tier)[5:]], divisionToNumber[str(currentUser[1].entries[0].division)[9:]], currentUser[1].entries[0].league_points, currentUser[1].entries[0].summoner])
