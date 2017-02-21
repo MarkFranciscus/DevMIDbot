@@ -28,8 +28,7 @@ async def on_read():
 async def hello(*args):
     strtest = ""
     for i in range(10):
-        strtest += str(i) + ""
-        strtest.ljust(10)
+        strtest += str(i) + "     "
         strtest += "x\n"
     print(strtest)
     return await mid_bot.say(strtest)
