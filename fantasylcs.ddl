@@ -2,9 +2,10 @@ drop table if exists Ranking;
 drop table if exists DiscordInfo;
 
 create table DiscordInfo (
-	discordName varchar NOT NULL UNIQUE,
-	Summoner varchar NOT NULL UNIQUE, 
-	primary key (discordName)
+	discordName varchar NOT NULL,
+	Summoner varchar NOT NULL, 
+	ServerID int NOT NULL,
+	primary key (discordName, ServerID)
 );
 
 

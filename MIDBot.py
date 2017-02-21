@@ -24,12 +24,11 @@ cur = conn.cursor()
 async def on_read():
     print("Client logged in")
 
-@mid_bot.command()
-async def hello(*args):
+@mid_bot.command(pass_context=True)
+async def test(*args, ctx):
     strtest = "```"
     for i in range(10):
-        strtest += str(i) + "     "
-        strtest += "x\n"
+        strtest = ctx.server
     print(strtest)
     strtest += '```'
     return await mid_bot.say(strtest)
