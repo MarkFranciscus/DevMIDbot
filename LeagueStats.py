@@ -11,17 +11,18 @@ numberToDivision = {0:'five', 1:'four',2:'three',3:'two',4:'one'}
 
 def shitter(usernames):
     summoner1 = riotapi.get_summoner_by_name("rythemkiller")
-    summoner2 = riotapi.get_summoner_by_name("courageousfalcon")
-    summoner3 = riotapi.get_summoner_by_name("flailure")
+    # summoner2 = riotapi.get_summoner_by_name("courageousfalcon")
+    # summoner3 = riotapi.get_summoner_by_name("flailure")
 
     # print("{name} is a level {level} summoner on the NA server.".format(name=summoner.name, level=summoner.level))
     eloList = []
     for user in usernames:
-        currentuser = riotapi.get_league_entries_by_summoner(summoners=user)
+        newSummoner = riotapi.get_summoner_by_name(user)
+        currentUser = riotapi.get_league_entries_by_summoner(summoners=newSummoner)
         if len(eloList) == 0:
-            eloList.append([tierToNumber[str(currentuser[1].tier)[5:]], divisionToNumber[str(currentuser[1].entries[0].division)[9:]], currentuser[1].entries[0].league_points, currentuser[1].entries[0].summoner])
+            eloList.append([tierToNumber[str(currentUser[1].tier)[5:]], divisionToNumber[str(currentUser[1].entries[0].division)[9:]], currentUser[1].entries[0].league_points, currentUser[1].entries[0].summoner])
         else:
-            eloList.append([tierToNumber[str(currentuser[1].tier)[5:]], divisionToNumber[str(currentuser[1].entries[0].division)[9:]], currentuser[1].entries[0].league_points, currentuser[1].entries[0].summoner])
+            eloList.append([tierToNumber[str(currentUser[1].tier)[5:]], divisionToNumber[str(currentUser[1].entries[0].division)[9:]], currentUser[1].entries[0].league_points, currentUser[1].entries[0].summoner])
             eloList = (sorted(eloList, key=itemgetter(0, 1, 2)))
             eloList.pop()
 
