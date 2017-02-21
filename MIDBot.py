@@ -25,7 +25,7 @@ async def on_read():
     print("Client logged in")
 
 @mid_bot.command(pass_context=True)
-async def test(*args, ctx):
+async def test(ctx, *args):
     strtest = "```"
     for i in range(10):
         strtest = ctx.server
