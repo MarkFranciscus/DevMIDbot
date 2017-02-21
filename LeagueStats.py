@@ -10,11 +10,12 @@ divisionToNumber = {'five': 0, 'four': 1, 'three': 2, 'two': 3, 'one':4}
 numberToDivision = {0:'five', 1:'four',2:'three',3:'two',4:'one'}
 
 def shitter(usernames):
-    summoner1 = riotapi.get_summoner_by_name("rythemkiller")
+    # summoner1 = riotapi.get_summoner_by_name("rythemkiller")
     # summoner2 = riotapi.get_summoner_by_name("courageousfalcon")
     # summoner3 = riotapi.get_summoner_by_name("flailure")
 
     # print("{name} is a level {level} summoner on the NA server.".format(name=summoner.name, level=summoner.level))
+    print(usernames)
     eloList = []
     for user in usernames:
         newSummoner = riotapi.get_summoner_by_name(user)
