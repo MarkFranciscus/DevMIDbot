@@ -114,7 +114,7 @@ async def predict(ctx, *args):
 @mid_bot.command()
 async def fantasy():
 
-        result = "Fantasy Predictions \n\n\t\t\t\t\t\t\t\t\t\t\t  |\t1\t|\t2/t|\t3\t|   4   |   5   |   6   |   7   |   8   |   9   |   10   \n"
+        result = "Fantasy Predictions \n\n\t\t\t\t\t\t\t\t\t\t\t ``` |\t1\t|\t2/t|\t3\t|\t4\t|\t5\t|\t6\t|\t7\t|\t8\t|\t9\t|\t10   \n"
         sql = "select * from ranking;"
         try:
             cur.execute(sql)
@@ -135,7 +135,7 @@ async def fantasy():
 
         except:
             print("didn't fetch")
-
+        result += "```"
         return await mid_bot.say(result)
 
 @mid_bot.command()
