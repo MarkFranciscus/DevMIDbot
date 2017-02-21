@@ -2,6 +2,9 @@ CLIENT_ID = 274963081526902784
 SECRET_ID = "990Uj5rYudAOPHHEC6eQCzSgfyddnjI5"
 BOT_TOKEN = "Mjc0OTYzMDgxNTI2OTAyNzg0.C26qfw.hotHQ6SdplXH7YXFQNavyxh97s4"
 
+region = "NA"
+riotkey = "e0675e35-f858-48d1-ad1b-cfac6fb6955c"
+
 dbname = 'd4nsuj4jjqjaui'
 user = 'vppudcomfsevnd'
 host = 'ec2-54-163-246-165.compute-1.amazonaws.com'
