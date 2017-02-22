@@ -77,7 +77,7 @@ async def setup(ctx, *args):
     print(ctx.message)
     print(args)
     try:
-        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + ctx.message.server +");"
+        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(ctx.message.server.id) + ");"
         print(sql)
         print(cur.execute(sql))
         try:
