@@ -1,2 +1,4 @@
 #!/bin/bash
+cd ~
+cd DevMIDbot
 python3 MIDBot.py
