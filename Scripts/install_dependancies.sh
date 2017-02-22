@@ -1,3 +1,3 @@
 #!/bin/bash
-cd DevMidBot
+cd DevMIDbot
 pip3 install -r requirements.txt --user
