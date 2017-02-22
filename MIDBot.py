@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext.commands import Bot
 
@@ -33,7 +34,7 @@ def test(ctx, *args):
     strtest += str(ctx.message.server.id)
     print(strtest)
     strtest += '```'
-    return yield from mid_bot.say(strtest)
+    yield from mid_bot.say(strtest)
 
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
@@ -47,13 +48,13 @@ def shitter(ctx, *args):
         usernames = cur.fetchall()
     except:
         print("failed to fetch usernames")
-    return yield from mid_bot.say(LeagueStats.shitter(usernames))
+    yield from mid_bot.say(LeagueStats.shitter(usernames))
 
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
 def last10(ctx, *args):
     if len(args) == 1:
-        return yield from mid_bot.say((LeagueStats.last10Games(args[0])))
+        yield from mid_bot.say((LeagueStats.last10Games(args[0])))
     elif len(args) == 0:
         sql = "select summoner from discordinfo where discordName='" + str(ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";"
         print(sql)
@@ -64,11 +65,11 @@ def last10(ctx, *args):
         try:
             username = cur.fetchall()
             print(str(username[0][0]).rstrip())
-            return yield from mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+            yield from mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
         except:
             print("failed to fetch username")
     else:
-        return yield from mid_bot.say("Too many parameters")
+        yield from mid_bot.say("Too many parameters")
 
 @mid_bot.command()
 @asyncio.coroutine
@@ -94,7 +95,7 @@ def setup(ctx, *args):
                 print(row)
         except:
             print("didnt select")
-        return yield from mid_bot.say("Tied @" + str(member) + " to " + args[0])
+        yield from mid_bot.say("Tied @" + str(member) + " to " + args[0])
         # print(cur.fetchall)
     except:
         print("didn't insert")
@@ -118,13 +119,13 @@ def predict(ctx, *args):
                 rows = cur.fetchall()
                 for row in rows:
                     print("                                            ", row)
-                return yield from mid_bot.say("Stored @" + str(username) + "'s prediction")
+                yield from mid_bot.say("Stored @" + str(username) + "'s prediction")
             except:
                 print("didnt select")
         except:
             print("failed to insert")
     else:
-        return yield from mid_bot.say("Please list 10 teams")
+        yield from mid_bot.say("Please list 10 teams")
 
 @mid_bot.command()
 @asyncio.coroutine
@@ -158,7 +159,7 @@ def fantasy():
         except:
             print("didn't fetch")
         result += "```"
-        return yield from mid_bot.say(result)
+        yield from mid_bot.say(result)
 
 @mid_bot.command()
 @asyncio.coroutine
@@ -179,7 +180,7 @@ def commands():
                """
 
 
-    return yield from mid_bot.say(commands)
+    yield from mid_bot.say(commands)
 
 
 mid_bot.run(botinfo.BOT_TOKEN)
