@@ -21,20 +21,23 @@ except:
 cur = conn.cursor()
 
 @mid_bot.event
-async def on_read():
+@asyncio.coroutine
+def on_read():
     print("Client logged in")
 
 @mid_bot.command(pass_context=True)
-async def test(ctx, *args):
+@asyncio.coroutine
+def test(ctx, *args):
     strtest = "```"
     # for i in range(10):
     strtest += str(ctx.message.server.id)
     print(strtest)
     strtest += '```'
-    return await mid_bot.say(strtest)
+    return yield from mid_bot.say(strtest)
 
 @mid_bot.command(pass_context=True)
-async def shitter(ctx, *args):
+@asyncio.coroutine
+def shitter(ctx, *args):
     sql = "select summoner from discordinfo where serverID='" + str(ctx.message.server.id) + "';"
     try:
         cur.execute(sql)
@@ -44,12 +47,13 @@ async def shitter(ctx, *args):
         usernames = cur.fetchall()
     except:
         print("failed to fetch usernames")
-    return await mid_bot.say(LeagueStats.shitter(usernames))
+    return yield from mid_bot.say(LeagueStats.shitter(usernames))
 
 @mid_bot.command(pass_context=True)
-async def last10(ctx, *args):
+@asyncio.coroutine
+def last10(ctx, *args):
     if len(args) == 1:
-        return await mid_bot.say((LeagueStats.last10Games(args[0])))
+        return yield from mid_bot.say((LeagueStats.last10Games(args[0])))
     elif len(args) == 0:
         sql = "select summoner from discordinfo where discordName='" + str(ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";"
         print(sql)
@@ -60,18 +64,20 @@ async def last10(ctx, *args):
         try:
             username = cur.fetchall()
             print(str(username[0][0]).rstrip())
-            return await mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+            return yield from mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
         except:
             print("failed to fetch username")
     else:
-        return await mid_bot.say("Too many parameters")
+        return yield from mid_bot.say("Too many parameters")
 
 @mid_bot.command()
-async def ranking(*args):
+@asyncio.coroutine
+def ranking(*args):
         print(args)
 
 @mid_bot.command(pass_context=True)
-async def setup(ctx, *args):
+@asyncio.coroutine
+def setup(ctx, *args):
     member = ctx.message.author
     print(member)
     print(ctx.message)
@@ -88,14 +94,15 @@ async def setup(ctx, *args):
                 print(row)
         except:
             print("didnt select")
-        return await mid_bot.say("Tied @" + str(member) + " to " + args[0])
+        return yield from mid_bot.say("Tied @" + str(member) + " to " + args[0])
         # print(cur.fetchall)
     except:
         print("didn't insert")
 
 
 @mid_bot.command(pass_context=True)
-async def predict(ctx, *args):
+@asyncio.coroutine
+def predict(ctx, *args):
     print(args)
     print(len(args))
     username = ctx.message.author
@@ -111,16 +118,17 @@ async def predict(ctx, *args):
                 rows = cur.fetchall()
                 for row in rows:
                     print("                                            ", row)
-                return await mid_bot.say("Stored @" + str(username) + "'s prediction")
+                return yield from mid_bot.say("Stored @" + str(username) + "'s prediction")
             except:
                 print("didnt select")
         except:
             print("failed to insert")
     else:
-        return await mid_bot.say("Please list 10 teams")
+        return yield from mid_bot.say("Please list 10 teams")
 
 @mid_bot.command()
-async def fantasy():
+@asyncio.coroutine
+def fantasy():
 
         result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  |  \n" \
                  "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
@@ -150,10 +158,11 @@ async def fantasy():
         except:
             print("didn't fetch")
         result += "```"
-        return await mid_bot.say(result)
+        return yield from mid_bot.say(result)
 
 @mid_bot.command()
-async def commands():
+@asyncio.coroutine
+def commands():
     commands = """List of commands : \n
                   !setup <League of Legends Summoner Name>
                   \t - Ties your discord account to your League of Legends account \n
@@ -170,7 +179,7 @@ async def commands():
                """
 
 
-    return await mid_bot.say(commands)
+    return yield from mid_bot.say(commands)
 
 
 mid_bot.run(botinfo.BOT_TOKEN)
