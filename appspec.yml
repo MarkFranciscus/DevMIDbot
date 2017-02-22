@@ -8,10 +8,6 @@ hooks:
     - location: Scripts/install_dependancies.sh
       timeout: 300
       runas: ubuntu
-  ApplicationStop:
-    - location: Scripts/stop_server.sh
-      timeout: 300
-      runas: ubuntu
   AfterInstall:
     - location: Scripts/restart_server.sh
       timeout: 300
