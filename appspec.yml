@@ -10,8 +10,8 @@ hooks:
       runas: ubuntu
   ApplicationStop:
     - location: Scripts/stop_server
-    timeout: 300
-    runas: ubuntu
+      timeout: 300
+      runas: ubuntu
   AfterInstall:
     - location: Scripts/restart_server
       timeout: 300
