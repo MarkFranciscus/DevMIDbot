@@ -1,6 +1,6 @@
 from operator import itemgetter
 from cassiopeia import riotapi
-from PythonServer import BotInfo
+import BotInfo
 
 riotapi.set_region(BotInfo.region)
 riotapi.set_api_key(BotInfo.riotkey)

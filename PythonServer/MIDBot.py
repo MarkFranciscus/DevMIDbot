@@ -4,7 +4,7 @@ import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
 
-from PythonServer import BotInfo
+import BotInfo
 
 
 class MIDBot():

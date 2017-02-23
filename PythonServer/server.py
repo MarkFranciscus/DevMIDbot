@@ -1,6 +1,6 @@
 import time
 from daemon import runner
-from PythonServer import MIDBot
+import MIDBot
 
 class App():
     def __init__(self):
