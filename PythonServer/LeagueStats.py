@@ -1,10 +1,9 @@
-from cassiopeia import riotapi
 from operator import itemgetter
-import botinfo
+from cassiopeia import riotapi
+from PythonServer import BotInfo
 
-
-riotapi.set_region(botinfo.region)
-riotapi.set_api_key(botinfo.riotkey)
+riotapi.set_region(BotInfo.region)
+riotapi.set_api_key(BotInfo.riotkey)
 
 tierToNumber = {'bronze': 0, 'silver': 1, 'gold': 2, 'platinum': 3, 'diamond': 4, 'master': 5, 'challenger': 6}
 numberToTier = {0: 'bronze', 1: 'Silver', 2: 'Gold', 3: 'Platinum', 4: 'Diamond', 5: 'Master', 6: 'Challenger'}
