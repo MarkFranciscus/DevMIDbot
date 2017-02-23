@@ -1,5 +1,5 @@
 import time
-from daemon import runner
+import daemon
 import MIDBot
 
 with daemon.DaemonContext():
