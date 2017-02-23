@@ -10,8 +10,7 @@ class App():
         self.pidfile_path =  '/tmp/foo.pid'
         self.pidfile_timeout = 5
     def run(self):
-        while True:
-            MIDBot.MIDBot()
+        MIDBot.MIDBot()
 
 app = App()
 daemon_runner = runner.DaemonRunner(app)
