@@ -26,8 +26,6 @@ def shitter(usernames):
 
     return str(eloList[0][3].name) + " is the shitter - " + str( numberToTier[eloList[0][0]]) + " " + str(numberToDivision[eloList[0][1]]) + " " + str(eloList[0][2]) + " LP"
 
-
-
 def last10Games(username):
     summoner = riotapi.get_summoner_by_name(username)
     win = 0
@@ -72,5 +70,4 @@ def lastGame(username):
         for participant in match.blue_team.participants:
             if participant.summoner == summoner:
                 outcome = "WIN"
-
     return "{0} - {1}/{2}/{3} - {4}cs - {5} ({6})".format(champion, k, d, a, cs, outcome, duration)
