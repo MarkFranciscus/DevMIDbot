@@ -4,7 +4,7 @@ drop table if exists DiscordInfo;
 create table DiscordInfo (
 	discordName varchar NOT NULL,
 	Summoner varchar NOT NULL, 
-	ServerID int NOT NULL,
+	ServerID bigint NOT NULL,
 	primary key (discordName, ServerID)
 );
 
@@ -25,3 +25,6 @@ create table Ranking (
 );
 
 select * from ranking, DiscordInfo;
+
+
+INSERT INTO DiscordInfo VALUES ('rhythmkiller#3594', 'goalie1752', 283697961563717634);

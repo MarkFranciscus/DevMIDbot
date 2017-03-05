@@ -48,3 +48,29 @@ def last10Games(username):
                 loss += 1
             else:
                 win += 1
+
+def lastGame(username):
+    summoner = riotapi.get_summoner_by_name(username)
+    matchList = summoner.match_list()
+    k = 0
+    d = 0
+    a = 0
+    cs = 0
+    outcome = "LOSS"
+    champion = ""
+
+    for i, match_reference in enumerate(matchList[0:1]):
+        match = match_reference.match()
+        duration = match.duration
+        for participant in match.participants:
+           if participant.summoner_id == summoner.id:
+                k += participant.stats.kills
+                d += participant.stats.deaths
+                a += participant.stats.assists
+                champion = participant.champion.name
+                cs = participant.stats.cs
+        for participant in match.blue_team.participants:
+            if participant.summoner == summoner:
+                outcome = "WIN"
+
+    return "{0} - {1}/{2}/{3} - {4}cs - {5} ({6})".format(champion, k, d, a, cs, outcome, duration)

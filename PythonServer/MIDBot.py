@@ -151,7 +151,7 @@ def fantasy():
         for i in range(len(rows)):
             for item in rows[i]:
                 if len(item) > 3:
-                    result += item[:23] + " | "
+                    result += item.ljust(24) + " | "
                 elif len(item) == 3:
                     result += item + " | "
                 else:
@@ -167,6 +167,27 @@ def fantasy():
     result += "```"
     yield from mid_bot.say(result)
 
+@mid_bot.command(pass_context=True)
+@asyncio.coroutine
+def lastgame(ctx, *args):
+    if len(args) == 1:
+        yield from mid_bot.say((LeagueStats.last10Games(args[0])))
+    elif len(args) == 0:
+        sql = "select summoner from discordinfo where discordName='" + str(
+            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";"
+        print(sql)
+        try:
+            cur.execute(sql)
+        except:
+            print("failed to find username")
+        try:
+            username = cur.fetchall()
+            print(str(username[0][0]).rstrip())
+            yield from mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+        except:
+            print("failed to fetch username")
+    else:
+        yield from mid_bot.say("Too many parameters")
 
 @mid_bot.command()
 @asyncio.coroutine
