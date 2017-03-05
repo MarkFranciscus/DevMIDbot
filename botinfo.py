@@ -3,7 +3,7 @@ SECRET_ID = "990Uj5rYudAOPHHEC6eQCzSgfyddnjI5"
 BOT_TOKEN = "Mjc0OTYzMDgxNTI2OTAyNzg0.C26qfw.hotHQ6SdplXH7YXFQNavyxh97s4"
 
 region = "NA"
-riotkey = "e0675e35-f858-48d1-ad1b-cfac6fb6955c"
+riotkey = "RGAPI-6c739462-fec1-4123-a84d-ab2a073d2159"
 
 dbname = 'd4nsuj4jjqjaui'
 user = 'vppudcomfsevnd'
