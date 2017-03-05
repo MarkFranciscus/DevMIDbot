@@ -171,7 +171,7 @@ def fantasy():
 @asyncio.coroutine
 def lastgame(ctx, *args):
     if len(args) == 1:
-        yield from mid_bot.say((LeagueStats.last10Games(args[0])))
+        yield from mid_bot.say((LeagueStats.lastgame(args[0])))
     elif len(args) == 0:
         sql = "select summoner from discordinfo where discordName='" + str(
             ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";"
@@ -183,7 +183,7 @@ def lastgame(ctx, *args):
         try:
             username = cur.fetchall()
             print(str(username[0][0]).rstrip())
-            yield from mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+            yield from mid_bot.say(LeagueStats.lastgame(str(username[0][0]).rstrip()))
         except:
             print("failed to fetch username")
     else:
