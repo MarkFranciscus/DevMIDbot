@@ -208,3 +208,5 @@ def commands():
                """
 
     yield from mid_bot.say(commands)
+
+mid_bot.run(BotInfo.BOT_TOKEN)
