@@ -69,5 +69,6 @@ def lastGame(username):
                 cs = participant.stats.cs
         for participant in match.blue_team.participants:
             if participant.summoner == summoner:
-                outcome = "WIN"
+                if match.blue_team.win:
+                    outcome = "WIN"
     return "{0} - {1}/{2}/{3} - {4}cs - {5} ({6})".format(champion, k, d, a, cs, outcome, duration)
