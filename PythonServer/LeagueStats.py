@@ -56,7 +56,7 @@ def lastGame(username):
     cs = 0
     outcome = "LOSS"
     champion = ""
-
+    summonerFound = False
     for i, match_reference in enumerate(matchList[0:1]):
         match = match_reference.match()
         duration = match.duration
@@ -69,6 +69,10 @@ def lastGame(username):
                 cs = participant.stats.cs
         for participant in match.blue_team.participants:
             if participant.summoner == summoner:
+                summonerFound = True
                 if match.blue_team.win:
                     outcome = "WIN"
+        if not summonerFound and match.red_team.win:
+            outcome = "WIN"
+
     return "{0} - {1}/{2}/{3} - {4}cs - {5} ({6})".format(champion, k, d, a, cs, outcome, duration)
