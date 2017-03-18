@@ -151,7 +151,7 @@ def fantasy():
         for i in range(len(rows)):
             for item in rows[i]:
                 if len(item) > 3:
-                    result += item.ljust(24) + " | "
+                    result += item.ljust(23x) + " | "
                 elif len(item) == 3:
                     result += item + " | "
                 else:
