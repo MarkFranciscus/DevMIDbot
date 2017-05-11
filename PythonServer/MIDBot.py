@@ -184,9 +184,12 @@ def lastgame(ctx, *args):
         try:
             username = cur.fetchall()
             print(str(username[0][0]).rstrip())
-            yield from mid_bot.say(LeagueStats.lastGame(str(username[0][0]).rstrip()))
         except:
             print("failed to fetch username")
+        try:
+            yield from mid_bot.say(LeagueStats.lastGame(str(username[0][0]).rstrip()))
+        except:
+            print ("stats problem")
     else:
         yield from mid_bot.say("Too many parameters")
 
