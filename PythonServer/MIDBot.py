@@ -137,7 +137,7 @@ def predict(ctx, *args):
 @mid_bot.command()
 @asyncio.coroutine
 def fantasy():
-    result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  |  \n" \
+    result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | Score  \n" \
              "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
 
     sql = "select * from ranking;"
@@ -151,7 +151,7 @@ def fantasy():
         for i in range(len(rows)):
             for item in rows[i]:
                 if len(item) > 3:
-                    result += item.ljust(23x) + " | "
+                    result += item.ljust(23) + " | "
                 elif len(item) == 3:
                     result += item + " | "
                 else:
@@ -166,6 +166,7 @@ def fantasy():
         print("didn't fetch")
     result += "```"
     yield from mid_bot.say(result)
+
 
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
@@ -189,6 +190,7 @@ def lastgame(ctx, *args):
     else:
         yield from mid_bot.say("Too many parameters")
 
+
 @mid_bot.command()
 @asyncio.coroutine
 def commands():
@@ -197,10 +199,12 @@ def commands():
                   \t - Ties your discord account to your League of Legends account \n
                   !shitter
                   \t - Outs the shitter of the sever \n
-                  !last10 <League of Legends Summoner Name>
+                  !last10 <Summoner Name>
                   \t - Win - Loss of the most recent 10 games of a League of Legends account \n
                   !predict <team> <team> <team> <team> <team> <team> <team> <team> <team> <team>
                   \t - Stores LCS prediction \n
+                  !lastgame <Summoner Name>
+                  \t - Displays details of last ranked game \n
                   !fantasy
                   \t - Displays all LCS predictions \n
                   !commands
@@ -208,5 +212,10 @@ def commands():
                """
 
     yield from mid_bot.say(commands)
+
+@mid_bot.command()
+@asyncio.coroutine
+def lcs():
+
 
 mid_bot.run(BotInfo.BOT_TOKEN)
