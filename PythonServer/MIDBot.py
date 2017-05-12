@@ -15,7 +15,10 @@ try:
 except:
     print("didn't connect")
 
-cur = conn.cursor()
+if conn is not null:
+    cur = conn.cursor()
+else:
+    exit(1)
 
 
 @mid_bot.event
