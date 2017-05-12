@@ -3,23 +3,18 @@ import asyncio
 import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
-
-import BotInfo
+import botinfo
 
 mid_bot = Bot(command_prefix="!")
 
 try:
     conn = psycopg2.connect(
-        "dbname=" + BotInfo.dbname + " user=" + BotInfo.user + " host=" + BotInfo.host + " password=" + BotInfo.password)
+        "dbname=" + botinfo.dbname + " user=" + botinfo.user + " host=" + botinfo.host + " password=" + botinfo.password)
     conn.autocommit = True
 except:
     print("didn't connect")
 
-if conn is not null:
-    cur = conn.cursor()
-else:
-    exit(1)
-
+cur = conn.cursor()
 
 @mid_bot.event
 @asyncio.coroutine
