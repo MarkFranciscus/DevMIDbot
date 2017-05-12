@@ -1,1 +1,3 @@
 #### MID BOT
+
+### Commands
