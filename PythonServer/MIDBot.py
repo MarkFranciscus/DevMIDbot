@@ -216,9 +216,9 @@ def commands():
 
     yield from mid_bot.say(commands)
 
-# @mid_bot.command()
-# @asyncio.coroutine
-# def lcs():
-
+@mid_bot.command()
+@asyncio.coroutine
+def lcs():
+    yield from mid_bot.say("webhooks")
 
 mid_bot.run(BotInfo.BOT_TOKEN)
