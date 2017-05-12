@@ -220,4 +220,4 @@ def lcs():
 
     yield from mid_bot.say("webhook")
 
-mid_bot.run(BotInfo.BOT_TOKEN)
+mid_bot.run(botinfo.BOT_TOKEN)
