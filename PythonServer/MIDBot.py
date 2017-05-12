@@ -217,6 +217,6 @@ def commands():
 @mid_bot.command()
 @asyncio.coroutine
 def lcs():
-    yield from mid_bot.say("hook")
+    yield from mid_bot.say("test")
 
 mid_bot.run(botinfo.BOT_TOKEN)
