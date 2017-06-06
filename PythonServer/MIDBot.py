@@ -21,7 +21,7 @@ cur = conn.cursor()
 def on_read():
     print("Client logged in")
 
-//Command for the sake of testing, prints serverid ten times
+#Command for the sake of testing, prints serverid ten times
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
 def test(ctx, *args):
@@ -35,44 +35,44 @@ def test(ctx, *args):
 
 
 
-//Displays win-loss of the past 10 games
+#Displays win-loss of the past 10 games
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
 def last10(ctx, *args):
-    if len(args) == 1: // a username has been given, look up that name
+    if len(args) == 1: # a username has been given, look up that name
         yield from mid_bot.say((LeagueStats.last10Games(args[0])))
-    elif len(args) == 0: //no username has been given
+    elif len(args) == 0: #no username has been given
         sql = "select summoner from discordinfo where discordName='" + str(
-            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" // construct sql query
-        print(sql) // log it
+            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" # construct sql query
+        print(sql) # log it
         try:
-            cur.execute(sql) //execute sql query
+            cur.execute(sql) #execute sql query
         except:
             print("failed to find username")
         try:
-            username = cur.fetchall() //use what the database returns to look up stats
+            username = cur.fetchall() #use what the database returns to look up stats
             print(str(username[0][0]).rstrip())
             yield from mid_bot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
         except:
             print("failed to fetch username")
-    else: //error
+    else: #error
         yield from mid_bot.say("Too many parameters")
 
-//In progress
+#In progress
 @mid_bot.command()
 @asyncio.coroutine
 def ranking(*args):
     print(args)
 
-//Insert user into database
+#Insert user into database
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
 def setup(ctx, *args):
     member = ctx.message.author
-    print(member) //log messages
+    print(member) #log messages
     print(ctx.message)
     print(args)
-    try: //insert user into database
+    try: #insert user into database
         sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(
             ctx.message.server.id) + ");"
         print(sql)
@@ -83,11 +83,11 @@ def setup(ctx, *args):
             rows = cur.fetchall()
             for row in rows:
                 print(row) log user in database
-        except: //error
+        except: #error
             print("didnt select")
-        yield from mid_bot.say("Tied @" + str(member) + " to " + args[0]) //success
+        yield from mid_bot.say("Tied @" + str(member) + " to " + args[0]) #success
         # print(cur.fetchall)
-    except: //error
+    except: #error
         print("didn't insert")
 
 
@@ -119,68 +119,68 @@ def predict(ctx, *args):
     else:
         yield from mid_bot.say("Please list 10 teams")
 
-//Displays a table into server of players fantasy score
+#Displays a table into server of players fantasy score
 @mid_bot.command()
 @asyncio.coroutine
 def fantasy():
-    // Starts formatting
+    # Starts formatting
     result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | Score  \n" \
              "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
 
     sql = "select * from ranking;"
-    try: //recieve table
+    try: #recieve table
         cur.execute(sql)
-    except: //error
+    except: #error
         print("didn't select")
     try:
-        //format by going row by row
+        #format by going row by row
         rows = cur.fetchall()
         for i in range(len(rows)):
             for item in rows[i]:
                 if len(item) > 3:
-                    result += item.ljust(23) + " | " //pad username
+                    result += item.ljust(23) + " | " #pad username
                 elif len(item) == 3:
-                    result += item + " | "//delimiter
+                    result += item + " | "#delimiter
                 else:
-                    result += item + "  | " //delimiter
+                    result += item + "  | " #delimiter
             if i < len(rows) - 1:
                 result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
-            else: //last row
+            else: #last row
                 result += "\n-------------------------------------------------------------------------------------\n"
 
 
-    except: //error
+    except: #error
         print("didn't fetch")
-    result += "```" //finish formatting
-    yield from mid_bot.say(result) //output
+    result += "```" #finish formatting
+    yield from mid_bot.say(result) #output
 
-//displays stats about players last game
+#displays stats about players last game
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
 def lastgame(ctx, *args):
-    if len(args) == 1: // username been given
+    if len(args) == 1: # username been given
         yield from mid_bot.say((LeagueStats.lastGame(args[0])))
-    elif len(args) == 0: //no username been given, user default
+    elif len(args) == 0: #no username been given, user default
         sql = "select summoner from discordinfo where discordName='" + str(
-            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" //construct sql query
+            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" #construct sql query
         print(sql)
         try:
-            cur.execute(sql) // execute sql query
+            cur.execute(sql) # execute sql query
         except:
-            print("failed to find username") //error
+            print("failed to find username") #error
         try:
-            username = cur.fetchall() //fetch
+            username = cur.fetchall() #fetch
             print(str(username[0][0]).rstrip())
-        except: //error
+        except: #error
             print("failed to fetch username")
-        try: //output
+        try: #output
             yield from mid_bot.say(LeagueStats.lastGame(str(username[0][0]).rstrip()))
-        except: //error
+        except: #error
             print ("stats problem")
-    else: //error
+    else: #error
         yield from mid_bot.say("Too many parameters")
 
-//lists all commands
+#lists all commands
 @mid_bot.command()
 @asyncio.coroutine
 def commands():
@@ -203,7 +203,7 @@ def commands():
 
     yield from mid_bot.say(commands)
 
-//inprogress
+#inprogress
 @mid_bot.command()
 @asyncio.coroutine
 def lcs():
