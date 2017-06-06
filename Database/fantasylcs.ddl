@@ -11,6 +11,7 @@ create table DiscordInfo (
 
 create table Ranking (
 	username NOT NULL REFERENCES DiscordInfo(discordName),
+	split integer,
 	one varchar NOT NULL,
 	two varchar NOT NULL,
 	three varchar NOT NULL,
@@ -21,7 +22,7 @@ create table Ranking (
 	eight varchar NOT NULL,
 	nine varchar NOT NULL,
 	ten varchar NOT NULL,
-	primary key (username)
+	primary key (username, split)
 );
 
 select * from ranking, DiscordInfo;
