@@ -25,7 +25,31 @@ create table Ranking (
 	primary key (username, split)
 );
 
-select * from ranking, DiscordInfo;
+create table LastOnline (
+	username varchar NOT NULL REFERENCES DiscordInfo(discordName),
+	login date NOT NULL,
+	primary key (username)
+);
 
+create table Teams (
+	season int NOT NULL,
+	T1 varchar NOT NULL,
+	T2 varchar NOT NULL,
+	T3 varchar NOT NULL,
+	T4 varchar NOT NULL,
+	T5 varchar NOT NULL,
+	T6 varchar NOT NULL,
+	T7 varchar NOT NULL,
+	T8 varchar NOT NULL,
+	T9 varchar NOT NULL,
+	T10 varchar NOT NULL,
+	primary key (season)
+);
 
-INSERT INTO DiscordInfo VALUES ('rhythmkiller#3594', 'goalie1752', 283697961563717634);
+create table LastCommand (
+	username varchar NOT NULL REFERENCES DiscordInfo(discordName),
+	command varchar NOT NULL,
+	day date,
+	primary key (username)
+);
+	
