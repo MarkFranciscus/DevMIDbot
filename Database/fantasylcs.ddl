@@ -2,26 +2,30 @@ drop table if exists Ranking;
 drop table if exists DiscordInfo;
 
 create table DiscordInfo (
-	discordName varchar NOT NULL,
-	Summoner varchar NOT NULL, 
-	ServerID bigint NOT NULL,
+	discordName varchar(50) NOT NULL,
+	summoner varchar(20) NOT NULL, 
+	serverID bigint NOT NULL,
 	primary key (discordName, ServerID)
 );
 
 
 create table Ranking (
-	username NOT NULL REFERENCES DiscordInfo(discordName),
+	username,
 	split integer,
-	one varchar NOT NULL,
-	two varchar NOT NULL,
-	three varchar NOT NULL,
-	four varchar NOT NULL,
-	five varchar NOT NULL,
-	six varchar NOT NULL,
-	seven varchar NOT NULL,
-	eight varchar NOT NULL,
-	nine varchar NOT NULL,
-	ten varchar NOT NULL,
+	one varchar(3) NOT NULL,
+	two varchar(3) NOT NULL,
+	three varchar(3) NOT NULL,
+	four varchar(3) NOT NULL,
+	five varchar(3) NOT NULL,
+	six varchar(3) NOT NULL,
+	seven varchar(3) NOT NULL,
+	eight varchar(3) NOT NULL,
+	nine varchar(3) NOT NULL,
+	ten varchar(3) NOT NULL,
+	FOREIGN KEY fk_username(username)
+    REFERENCES DiscordInfo(discordName)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
 	primary key (username, split)
 );
 
