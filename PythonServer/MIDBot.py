@@ -82,7 +82,7 @@ def setup(ctx, *args):
             cur.execute(sql)
             rows = cur.fetchall()
             for row in rows:
-                print(row) log user in database
+                print(row) #log user in database
         except: #error
             print("didnt select")
         yield from mid_bot.say("Tied @" + str(member) + " to " + args[0]) #success
