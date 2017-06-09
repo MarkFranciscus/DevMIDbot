@@ -5,18 +5,27 @@ import psycopg2
 from discord.ext.commands import Bot
 import botinfo
 # import mysql.connector
-import MySQLdb
-
+# import MySQLdb
+import pymysql.cursors
 
 mid_bot = Bot(command_prefix="!")
 
 try:
-    cnx = MySQLdb.connect(host='127.0.0.1', user=botinfo.user, password=botinfo.password, database=botinfo.dbname)
+    # cnx = MySQLdb.connect(host='127.0.0.1', user=botinfo.user, password=botinfo.password, database=botinfo.dbname)
+
+
+    # Connect to the database
+    cnx = pymysql.connect(host='127.0.0.1',
+                                 user=botinfo.user,
+                                 password=botinfo.password,
+                                 database=botinfo.dbname,
+                                 charset='utf8mb4',
+                                 cursorclass=pymysql.cursors.DictCursor)
 except:
     print("didn't connect")
 
-cur = cnx.cursor(buffered=True)
-curB = cnx.cursor(buffered=True)
+cur = cnx.cursor
+# curB = cnx.cursor(buffered=True)
 
 # try:
 #     conn = psycopg2.connect(
