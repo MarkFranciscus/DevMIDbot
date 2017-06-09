@@ -4,12 +4,14 @@ import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
 import botinfo
-import mysql.connector
+# import mysql.connector
+import MySQLdb
+
 
 mid_bot = Bot(command_prefix="!")
 
 try:
-    cnx = mysql.connector.connect(user=botinfo.user, database=botinfo.dbname)
+    cnx = MySQLdb.connect(host='127.0.0.1', user=botinfo.user, password=botinfo.password, database=botinfo.dbname)
 except:
     print("didn't connect")
 
