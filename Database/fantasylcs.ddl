@@ -11,7 +11,7 @@ create table DiscordInfo (
 
 create table Ranking (
 	username varchar(40) NOT NULL,
-	split inter,
+	split int,
 	one varchar(3) NOT NULL,
 	two varchar(3) NOT NULL,
 	three varchar(3) NOT NULL,
