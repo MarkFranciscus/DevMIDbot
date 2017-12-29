@@ -1,5 +1,4 @@
 import asyncio
-
 import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
@@ -16,11 +15,11 @@ try:
 
     # Connect to the database
     cnx = pymysql.connect(host='127.0.0.1',
-                                 user='root',
-                                 password='password',
-                                 database=botinfo.dbname,
-                                 charset='utf8mb4',
-                                 cursorclass=pymysql.cursors.DictCursor)
+                          user='root',
+                          password='password',
+                          database=botinfo.dbname,
+                          charset='utf8mb4',
+                          cursorclass=pymysql.cursors.DictCursor)
 except:
     print("didn't connect")
 
