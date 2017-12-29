@@ -10,8 +10,8 @@ create table DiscordInfo (
 
 
 create table Ranking (
-	username,
-	split integer,
+	username varchar(40) NOT NULL,
+	split int,
 	one varchar(3) NOT NULL,
 	two varchar(3) NOT NULL,
 	three varchar(3) NOT NULL,
@@ -30,29 +30,29 @@ create table Ranking (
 );
 
 create table LastOnline (
-	username varchar NOT NULL REFERENCES DiscordInfo(discordName),
+	username varchar(40) NOT NULL REFERENCES DiscordInfo(discordName),
 	login date NOT NULL,
 	primary key (username)
 );
 
 create table Teams (
 	season int NOT NULL,
-	T1 varchar NOT NULL,
-	T2 varchar NOT NULL,
-	T3 varchar NOT NULL,
-	T4 varchar NOT NULL,
-	T5 varchar NOT NULL,
-	T6 varchar NOT NULL,
-	T7 varchar NOT NULL,
-	T8 varchar NOT NULL,
-	T9 varchar NOT NULL,
-	T10 varchar NOT NULL,
+	T1 varchar(3) NOT NULL,
+	T2 varchar(3) NOT NULL,
+	T3 varchar(3) NOT NULL,
+	T4 varchar(3) NOT NULL,
+	T5 varchar(3) NOT NULL,
+	T6 varchar(3) NOT NULL,
+	T7 varchar(3) NOT NULL,
+	T8 varchar(3) NOT NULL,
+	T9 varchar(3) NOT NULL,
+	T10 varchar(3) NOT NULL,
 	primary key (season)
 );
 
 create table LastCommand (
-	username varchar NOT NULL REFERENCES DiscordInfo(discordName),
-	command varchar NOT NULL,
+	username varchar(40) NOT NULL REFERENCES DiscordInfo(discordName),
+	command varchar(100) NOT NULL,
 	day date,
 	primary key (username)
 );
