@@ -11,7 +11,7 @@ create table DiscordInfo (
 
 create table Ranking (
 	username varchar(40) NOT NULL,
-	split int,
+	split inter,
 	one varchar(3) NOT NULL,
 	two varchar(3) NOT NULL,
 	three varchar(3) NOT NULL,
@@ -25,7 +25,7 @@ create table Ranking (
 	FOREIGN KEY fk_username(username)
     REFERENCES DiscordInfo(discordName)
     ON UPDATE CASCADE
-    ON DELETE RESTRICT
+    ON DELETE RESTRICT,
 	primary key (username, split)
 );
 
