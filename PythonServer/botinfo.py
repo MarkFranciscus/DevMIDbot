@@ -5,7 +5,7 @@ BOT_TOKEN = "Mjc0OTYzMDgxNTI2OTAyNzg0.C26qfw.hotHQ6SdplXH7YXFQNavyxh97s4"
 region = "NA"
 riotkey = "RGAPI-6c739462-fec1-4123-a84d-ab2a073d2159"
 
-dbname = 'MIDBot'
+dbname = 'midbot'
 user = 'MIDBot'
 host = '127.0.0.1'
 password = 'Baronbotsucks!8365'
