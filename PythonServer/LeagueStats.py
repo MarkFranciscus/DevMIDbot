@@ -14,7 +14,7 @@ def shitter(usernames):
 
     eloList = []
     for user in usernames:
-        newSummoner = riotapi.get_summoner_by_name(user[0].strip())
+        newSummoner = riotapi.get_summoner(name=user[0].strip())
         currentUser = riotapi.get_league_entries_by_summoner(summoners=newSummoner)
         if len(eloList) == 0:
             eloList.append([tierToNumber[str(currentUser[1].tier)[5:]], divisionToNumber[str(currentUser[1].entries[0].division)[9:]], currentUser[1].entries[0].league_points, currentUser[1].entries[0].summoner])
@@ -27,7 +27,7 @@ def shitter(usernames):
     return str(eloList[0][3].name) + " is the shitter - " + str( numberToTier[eloList[0][0]]) + " " + str(numberToDivision[eloList[0][1]]) + " " + str(eloList[0][2]) + " LP"
 
 def last10Games(username):
-    summoner = riotapi.get_summoner_by_name(username)
+    summoner = riotapi.get_summoner(name=username)
     win = 0
     loss = 0
     for match_reference in summoner.match_list():
@@ -48,7 +48,7 @@ def last10Games(username):
                 win += 1
 
 def lastGame(username):
-    summoner = riotapi.get_summoner_by_name(username)
+    summoner = riotapi.get_summoner(name=username)
     matchList = summoner.match_list()
     k = 0
     d = 0
