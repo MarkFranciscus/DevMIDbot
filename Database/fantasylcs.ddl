@@ -1,7 +1,7 @@
-drop table if exists Ranking;
-drop table if exists DiscordInfo;
+drop table if exists ranking;
+drop table if exists discordInfo;
 
-create table DiscordInfo (
+create table discordInfo (
 	discordName varchar(50) NOT NULL,
 	summoner varchar(20) NOT NULL, 
 	serverID bigint NOT NULL,
@@ -9,8 +9,9 @@ create table DiscordInfo (
 );
 
 
-create table Ranking (
+create table pickem (
 	username varchar(40) NOT NULL,
+	serverID bigint NOT NULL,
 	split int,
 	one varchar(3) NOT NULL,
 	two varchar(3) NOT NULL,
@@ -22,20 +23,20 @@ create table Ranking (
 	eight varchar(3) NOT NULL,
 	nine varchar(3) NOT NULL,
 	ten varchar(3) NOT NULL,
-	FOREIGN KEY fk_username(username)
-    REFERENCES DiscordInfo(discordName)
+	FOREIGN KEY fk_username(username, serverID)
+    REFERENCES discordInfo(discordName, serverID)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
 	primary key (username, split)
 );
 
-create table LastOnline (
-	username varchar(40) NOT NULL REFERENCES DiscordInfo(discordName),
+create table lastOnline (
+	username varchar(40) NOT NULL REFERENCES discordInfo(discordName),
 	login date NOT NULL,
 	primary key (username)
 );
 
-create table Teams (
+create table teams (
 	season int NOT NULL,
 	T1 varchar(3) NOT NULL,
 	T2 varchar(3) NOT NULL,
@@ -50,10 +51,27 @@ create table Teams (
 	primary key (season)
 );
 
-create table LastCommand (
+create table lastCommand (
 	username varchar(40) NOT NULL REFERENCES DiscordInfo(discordName),
 	command varchar(100) NOT NULL,
 	day date,
 	primary key (username)
+);
+
+create fantasyTeam (
+	username varchar(40) NOT NULL,
+	serverID bigint NOT NULL,
+	split int NOT NULL,
+	top int,
+	jungle int,
+	mid int,
+	bot int,
+	support int,
+	flex int,
+	team int,
+	sub1 int,
+	sub2 int,
+	sub3 int,
+	primary key(username, serverID, split)
 );
 	

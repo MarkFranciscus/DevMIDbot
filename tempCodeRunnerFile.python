@@ -1,0 +1,24 @@
+import requests
+from bs4 import BeautifulSoup
+import time
+
+url_to_scrape = 'https://www.lolesports.com/en_US/na-lcs/na_2018_summer/standings/regular_season'
+r = requests.get(url_to_scrape)
+
+# parse the text of the URL
+soup = BeautifulSoup(r.text, "html.parser")
+print soup
+# get the "stats-container" table
+stats_table = soup.find_all("div")
+print(stats_table)
+
+# Each row is: Rank/Team/Wins/Losses
+format_string = "%-4s %-20s %-s %-s"
+
+# print "Current NA LCS STANDINGS"
+# print "-----------------------------"
+# print format_string % ("RANK", "TEAM", "W", "L")
+# for row in stats_table.find_all("tr"):
+# 	cells = row.find_all("td")
+# 	if len(cells) > 0:
+# 		print (format_string % (cells[0].text.strip(), cells[2].text.strip(), cells[3].text.strip(), cells[4].text.strip()))
