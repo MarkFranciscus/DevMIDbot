@@ -1,5 +1,5 @@
 import requests, json
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 import time
 
 # url_to_scrape = 'https://www.lolesports.com/en_US/na-lcs/na_2018_summer/standings/regular_season'
@@ -25,6 +25,16 @@ def get_team_ids():
         ids.append(int(x["team"]))
     return ids
 
+def get_standings():
+    standings = rawData["highlanderTournaments"][6]["standings"]
+    teams = rawData["teams"]
+    result = []
+    for i in standings:
+        for team in teams:
+            if i == team["guid"]:
+                result.append(team["name"])
+    print(result)
+
 def get_slug(ids):
     teams = rawData["teams"]
     # print(teams)
@@ -38,9 +48,10 @@ def get_slug(ids):
                 break
     print(slugs)
 # parse the text of the URL
-q = get_team_ids()
-print(q)
-get_slug(q)
+# q = get_team_ids()
+# print(q)
+print(get_standings())
+# get_slug(q)
 # Each row is: Rank/Team/Wins/Losses
 format_string = "%-4s %-20s %-s %-s"
 
