@@ -52,8 +52,6 @@ def test(ctx, *args):
     yield from mid_bot.say(strtest)
 
 
-
-
 #Displays win-loss of the past 10 games
 @mid_bot.command(pass_context=True)
 @asyncio.coroutine
