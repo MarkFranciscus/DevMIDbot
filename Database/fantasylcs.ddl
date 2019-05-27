@@ -1,6 +1,4 @@
 DROP TABLE IF EXISTS pickems;
-DROP TABLE IF EXISTS lastOnline;
-DROP TABLE IF EXISTS lastCommand;
 DROP TABLE IF EXISTS fantasyTeam;
 DROP TABLE IF EXISTS standings;
 DROP TABLE IF EXISTS teams;
@@ -21,6 +19,7 @@ CREATE TABLE splits (
 	splitID INT NOT null,
 	splitName text not null,
 	region text not null,
+	title text not null,
 	unique(splitID),
 	PRIMARY KEY (splitID)
 );
@@ -81,17 +80,17 @@ CREATE TABLE fantasyTeam (
 	sub3 INT,
 	unique(username, serverID, leagueID),
 	PRIMARY KEY(username, serverID, leagueID),
-	foreign key (username, serverID) references discordinfo(discordname, serverID),
-	foreign key (splitID) references splits(splitID)
+	foreign key (username, serverID) references discordinfo(discordname, serverID)
 );
 
 -- Standings
 CREATE TABLE standings (
-	splitID INT NOT NULL references splits(splitID),
+	splitID INT NOT NULL,
 	updateID BIGINT NOT NULL,
 	teamID VARCHAR(40) NOT NULL,
 	placement INT NOT NULL,
 	update_date DATE NOT NULL,
 	unique(splitID, updateID, teamID),
-	PRIMARY KEY(splitID, updateID, teamID)
+	PRIMARY KEY(splitID, updateID, teamID),
+	foreign key (splitID) references splits(splitID)
 );

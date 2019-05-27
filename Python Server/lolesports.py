@@ -8,7 +8,6 @@ tournamentURL = "http://api.lolesports.com/api/v1/scheduleItems?leagueId={}"
 teamURL = "http://api.lolesports.com/api/v1/teams?slug={1}&tournament={2}"
 r = requests.get(tournamentURL.format("2"))
 rawData = json.loads(r.text)
-cur = None
 
 def get_team_ids():
     rosters = rawData["highlanderTournaments"][6]["rosters"].values()
@@ -40,11 +39,13 @@ def get_standings(region):
                     placement.append(str(team["name"]))
         result[num_teams] = placement
         num_teams += len(standings[i])
+    return result
 
-def find_current_split():
+def find_current_split(region):
     """Find current split and roster"""
+
     for split in rawData["highlanderTournaments"]:
-        if split["title"] == "lcs_2019_spring":
+        if split["title"] == region:
             brackets = split["brackets"]
             rosters = split["rosters"]
     return brackets, rosters
