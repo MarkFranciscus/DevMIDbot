@@ -1,11 +1,14 @@
 import requests, json
 import time
-
+import psycopg2
+from configparser import ConfigParser
+from utility import connect_database
 
 tournamentURL = "http://api.lolesports.com/api/v1/scheduleItems?leagueId={}"
 teamURL = "http://api.lolesports.com/api/v1/teams?slug={1}&tournament={2}"
 r = requests.get(tournamentURL.format("2"))
 rawData = json.loads(r.text)
+cur = None
 
 def get_team_ids():
     rosters = rawData["highlanderTournaments"][6]["rosters"].values()
@@ -14,8 +17,8 @@ def get_team_ids():
         ids.append(int(x["team"]))
     return ids
 
-def get_standings():
-    brackets, rosters = find_current_split()
+def get_standings(region):
+    brackets, rosters = find_current_split(region)
 
     for bracket in brackets.values():
         if bracket["name"] == "regular_season":
@@ -55,16 +58,3 @@ def get_slug(ids):
                 slugs.append(y["slug"])
                 break
     print(slugs)
-
-print(get_standings())
-
-# Each row is: Rank/Team/Wins/Losses
-format_string = "%-4s %-20s %-s %-s"
-
-# print "Current NA LCS STANDINGS"
-# print "-----------------------------"
-# print format_string % ("RANK", "TEAM", "W", "L")
-# for row in stats_table.find_all("tr"):
-# 	cells = row.find_all("td")
-# 	if len(cells) > 0:
-# 		print (format_string % (cells[0].text.strip(), cells[2].text.strip(), cells[3].text.strip(), cells[4].text.strip()))

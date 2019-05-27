@@ -1,77 +1,97 @@
-drop table if exists ranking;
-drop table if exists discordInfo;
+DROP TABLE IF EXISTS pickems;
+DROP TABLE IF EXISTS lastOnline;
+DROP TABLE IF EXISTS lastCommand;
+DROP TABLE IF EXISTS fantasyTeam;
+DROP TABLE IF EXISTS standings;
+DROP TABLE IF EXISTS teams;
+drop table if exists splits;
+DROP TABLE IF EXISTS discordInfo;
 
-create table discordInfo (
-	discordName varchar(50) NOT NULL,
-	summoner varchar(20) NOT NULL, 
-	serverID bigint NOT NULL,
-	primary key (discordName, ServerID)
+-- Basic discord user information
+CREATE TABLE discordInfo (
+	discordName TEXT NOT NULL,
+	summoner TEXT NOT NULL, 
+	serverID BIGINT NOT NULL,
+	unique (discordName, serverID),
+	PRIMARY KEY (discordName, serverID)	
 );
 
-
-create table pickem (
-	username varchar(40) NOT NULL,
-	serverID bigint NOT NULL,
-	split int,
-	one varchar(3) NOT NULL,
-	two varchar(3) NOT NULL,
-	three varchar(3) NOT NULL,
-	four varchar(3) NOT NULL,
-	five varchar(3) NOT NULL,
-	six varchar(3) NOT NULL,
-	seven varchar(3) NOT NULL,
-	eight varchar(3) NOT NULL,
-	nine varchar(3) NOT NULL,
-	ten varchar(3) NOT NULL,
-	FOREIGN KEY fk_username(username, serverID)
-    REFERENCES discordInfo(discordName, serverID)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT,
-	primary key (username, split)
+-- Split information
+CREATE TABLE splits (
+	splitID INT NOT null,
+	splitName text not null,
+	region text not null,
+	unique(splitID),
+	PRIMARY KEY (splitID)
 );
 
-create table lastOnline (
-	username varchar(40) NOT NULL REFERENCES discordInfo(discordName),
-	login date NOT NULL,
-	primary key (username)
+-- Pickem ranking
+CREATE TABLE pickems (
+	username VARCHAR(40) NOT NULL,
+	serverID BIGINT NOT NULL,
+	splitID INT,
+	one TEXT NOT NULL,
+	two TEXT NOT NULL,
+	three TEXT NOT NULL,
+	four TEXT NOT NULL,
+	five TEXT NOT NULL,
+	six TEXT NOT NULL,
+	seven TEXT NOT NULL,
+	eight TEXT NOT NULL,
+	nine TEXT NOT NULL,
+	ten TEXT NOT NULL,
+	unique(username, serverID, splitID),
+	PRIMARY KEY (username, serverID, splitID),
+	FOREIGN KEY (username, serverID) references discordinfo(discordName,  serverID),
+	foreign key (splitID) references splits(splitID)
 );
 
-create table teams (
-	season int NOT NULL,
-	T1 varchar(3) NOT NULL,
-	T2 varchar(3) NOT NULL,
-	T3 varchar(3) NOT NULL,
-	T4 varchar(3) NOT NULL,
-	T5 varchar(3) NOT NULL,
-	T6 varchar(3) NOT NULL,
-	T7 varchar(3) NOT NULL,
-	T8 varchar(3) NOT NULL,
-	T9 varchar(3) NOT NULL,
-	T10 varchar(3) NOT NULL,
-	primary key (season)
+-- List of teams in a particular split
+CREATE TABLE teams (
+	splitID INT NOT NULL,
+	team1 TEXT NOT NULL,
+	team2 TEXT NOT NULL,
+	team3 TEXT NOT NULL,
+	team4 TEXT NOT NULL,
+	team5 TEXT NOT NULL,
+	team6 TEXT NOT NULL,
+	team7 TEXT NOT NULL,
+	team8 TEXT NOT NULL,
+	team9 TEXT NOT NULL,
+	team10 TEXT NOT NULL,
+	unique(splitID),
+	PRIMARY KEY (splitID),
+	foreign key (splitID) references splits(splitID)
 );
 
-create table lastCommand (
-	username varchar(40) NOT NULL REFERENCES DiscordInfo(discordName),
-	command varchar(100) NOT NULL,
-	day date,
-	primary key (username)
+-- Fantasy team table
+CREATE TABLE fantasyTeam (
+	username VARCHAR(40) NOT NULL,
+	serverID BIGINT NOT NULL,
+	leagueID INT NOT NULL, 
+	top INT,
+	jungle INT,
+	mid INT,
+	bot INT,
+	support INT,
+	flex INT,
+	team INT,
+	sub1 INT,
+	sub2 INT,
+	sub3 INT,
+	unique(username, serverID, leagueID),
+	PRIMARY KEY(username, serverID, leagueID),
+	foreign key (username, serverID) references discordinfo(discordname, serverID),
+	foreign key (splitID) references splits(splitID)
 );
 
-create fantasyTeam (
-	username varchar(40) NOT NULL,
-	serverID bigint NOT NULL,
-	split int NOT NULL,
-	top int,
-	jungle int,
-	mid int,
-	bot int,
-	support int,
-	flex int,
-	team int,
-	sub1 int,
-	sub2 int,
-	sub3 int,
-	primary key(username, serverID, split)
+-- Standings
+CREATE TABLE standings (
+	splitID INT NOT NULL references splits(splitID),
+	updateID BIGINT NOT NULL,
+	teamID VARCHAR(40) NOT NULL,
+	placement INT NOT NULL,
+	update_date DATE NOT NULL,
+	unique(splitID, updateID, teamID),
+	PRIMARY KEY(splitID, updateID, teamID)
 );
-	

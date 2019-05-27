@@ -3,37 +3,9 @@ import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
 import botinfo
-# import mysql.connector
-# import MySQLdb
-import pymysql.cursors
 
 mid_bot = Bot(command_prefix="!")
-
-try:
-    # cnx = MySQLdb.connect(host='127.0.0.1', user=botinfo.user, password=botinfo.password, database=botinfo.dbname)
-
-
-    # Connect to the database
-    cnx = pymysql.connect(host='127.0.0.1',
-                          user='root',
-                          password='password',
-                          database=botinfo.dbname,
-                          charset='utf8mb4',
-                          cursorclass=pymysql.cursors.DictCursor)
-except:
-    print("didn't connect")
-
-cur = cnx.cursor
-# curB = cnx.cursor(buffered=True)
-
-# try:
-#     conn = psycopg2.connect(
-#         "dbname=" + botinfo.dbname + " user=" + botinfo.user + " host=" + botinfo.host + " password=" + botinfo.password)
-#     conn.autocommit = True
-# except:
-#     print("didn't connect")
-#
-# cur = conn.cursor()
+cur = None
 
 @mid_bot.event
 @asyncio.coroutine
