@@ -20,9 +20,10 @@ async def on_read():
 @MIDBot.command(pass_context=True)
 async def test(ctx, *args):
     strtest = "```"
-    for i in range(10):
-        strtest += str('%d\n' % (i))
-    print(strtest)
+    # for i in range(10):
+        # strtest += str('%d\n' % (i))
+    # print(strtest)
+    strtest += str(ctx.message.guild.id)
     strtest += '```'
     await ctx.send(strtest)
 
@@ -34,7 +35,7 @@ async def last10(ctx, *args):
         await ctx.send(LeagueStats.last10Games(args[0]))
     elif len(args) == 0: #no username has been given
         sql = "select summoner from discordinfo where discordName='" + str(
-            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" # construct sql query
+            ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
         print(sql) # log it
         try:
             cur.execute(sql) #execute sql query
@@ -63,7 +64,7 @@ async def setup(ctx, *args):
     print(args)
     try: #insert user into database
         sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(
-            ctx.message.server.id) + ");"
+            ctx.message.guild.id) + ");"
         print(sql)
         print(cur.execute(sql))
         try:
@@ -148,7 +149,7 @@ async def lastgame(ctx, *args):
         await ctx.send((LeagueStats.lastGame(args[0])))
     elif len(args) == 0: #no username been given, user default
         sql = "select summoner from discordinfo where discordName='" + str(
-            ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" #construct sql query
+            ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
         print(sql)
         try:
             cur.execute(sql) # execute sql query
