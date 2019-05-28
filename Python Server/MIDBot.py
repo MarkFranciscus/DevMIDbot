@@ -6,6 +6,8 @@ import utility
 
 MIDBot = Bot(command_prefix="!")
 cur = None
+regions = ["NA", "KR", "EU", "CN"]
+
 
 @MIDBot.event
 async def on_ready():
@@ -28,7 +30,8 @@ async def test(ctx, *args):
     await ctx.send(strtest)
 
 
-#Displays win-loss of the past 10 games
+# Displays win-loss of the past 10 games
+# TODO doesn't work
 @MIDBot.command(pass_context=True)
 async def last10(ctx, *args):
     if len(args) == 1: # a username has been given, look up that name
@@ -82,29 +85,46 @@ async def setup(ctx, *args):
 
 
 @MIDBot.command(pass_context=True)
-async def predict(ctx, *args):
-    print(args)
-    print(len(args))
-    username = ctx.message.author
-    print(username)
-    if len(args) == 10:
-        sql = "INSERT INTO ranking VALUES ('" + str(username) + "', '" + args[0] + "', '" + args[1] + "', '" + args[
-            2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + \
-              args[8] + "', '" + args[9] + "');"
-        print(sql)
-        try:
-            print(cur.execute(sql))
+async def pickem(ctx, *args):
+    # print(args[0])
+    # print(len(args))
+    username = str(ctx.message.author)
+    region = args[0]
+    # print(username)
+    if len(args) == 11:
+        if args[0].upper() in regions:
+            regionSQL = "SELECT splitID FROM splits WHERE region = '{}' AND isCurrent = true;".format(region)
+            print(regionSQL)
             try:
-                sql = "select * from ranking;"
-                cur.execute(sql)
-                rows = cur.fetchall()
-                for row in rows:
-                    print("                                            ", row)
-                await ctx.send("Stored @" + str(username) + "'s prediction")
+                cur.execute(regionSQL)
             except:
-                print("didnt select")
-        except:
-            print("failed to insert")
+                print("failed execute")
+
+            try:
+                splitID = cur.fetchall()
+                print(splitID)
+            except:
+                print("failed to find region")
+            # sql = "INSERT INTO pickems VALUES ('" + str(username) + "', '" + ctx.message.guild.id + "', '" + splitID + "', '" + args[0] + "', '" + args[1] + "', '" + args[
+            #     2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + \
+            #     args[8] + "', '" + args[9] + "', '" + args[10] + "');"
+            pickemSQL = "INSERT INTO pickems VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');".format(username, ctx.message.guild.id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9],)
+            print(pickemSQL)
+            try:
+                print(cur.execute(pickemSQL))
+                # try:
+                #     sql = "select * from ranking;"
+                #     cur.execute(sql)
+                #     rows = cur.fetchall()
+                #     for row in rows:
+                #         print("                                            ", row)
+                #     await ctx.send("Stored {}".format(ctx.message.author.mention()) + "'s prediction")
+                # except:
+                #     print("didnt select")
+            except:
+                print("failed to insert")
+        else:
+            await ctx.send("{} give a valid region".format(ctx.message.author.mention()))
     else:
         await ctx.send("Please list 10 teams")
 
@@ -142,7 +162,8 @@ async def fantasy(ctx, *args):
     result += "```" #finish formatting
     await ctx.send(result) #output
 
-#displays stats about players last game
+# displays stats about players last game
+# TODO doesn't work
 @MIDBot.command(pass_context=True)
 async def lastgame(ctx, *args):
     if len(args) == 1: # username been given
@@ -196,6 +217,4 @@ async def lcs():
 
 if __name__ == '__main__':
     discordTokens = utility.config(section='discord')
-    # print(discordTokens)
-    # MIDBot.login(discordTokens['bot_token'])
     MIDBot.run(discordTokens['bot_token'])
