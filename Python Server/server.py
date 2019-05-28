@@ -1,7 +1,7 @@
 import time
-import daemon
 import MIDBot
-import BotInfo
+from utility import config
 
-with daemon.DaemonContext():
-    MIDBot.midbot.run(BotInfo.BOT_TOKEN)
+if __name__ == '__main__':
+    discordTokens = config(section='discord')
+    MIDBot.MIDBot.run(discordTokens['BOT_TOKEN'])

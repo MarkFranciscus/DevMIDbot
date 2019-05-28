@@ -1,12 +1,17 @@
 from configparser import ConfigParser
 import psycopg2
+import os
+
+# print(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 
 def config(filename='config.ini', section='postgresql'):
     # create a parser
     parser = ConfigParser()
     # read config file
-    parser.read(filename)
+    filepath = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')) + '\\'
+    parser.read(filepath+ filename)
  
+
     # get section, default to postgresql
     db = {}
     if parser.has_section(section):
@@ -42,7 +47,9 @@ def connect_database():
         return cur
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
-    finally:
-        if conn is not None:
-            conn.close()
-            print('Database connection closed.')
+    # finally:
+    #     if conn is not None:
+    #         conn.close()
+    #         print('Database connection closed.')
+
+print(connect_database())

@@ -2,40 +2,36 @@ import asyncio
 import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
-from utility import connect_database
+import utility
 
-midBot = Bot(command_prefix="!")
+MIDBot = Bot(command_prefix="!")
 cur = None
 
-@midBot.event
-@asyncio.coroutine
-def on_ready():
-    cur = connect_database()
+@MIDBot.event
+async def on_ready():
+    cur = utility.connect_database()
 
-@midBot.event
-@asyncio.coroutine
-def on_read():
+@MIDBot.event
+async def on_read():
     print("Client logged in")
 
 
 # Command for the sake of testing, prints serverid ten times
-@midBot.command(pass_context=True)
-@asyncio.coroutine
-def test(ctx, *args):
+@MIDBot.command(pass_context=True)
+async def test(ctx, *args):
     strtest = "```"
-    # for i in range(10):
-    strtest += str(ctx.message.server.id)
+    for i in range(10):
+        strtest += str('%d\n' % (i))
     print(strtest)
     strtest += '```'
-    yield from midBot.say(strtest)
+    await ctx.send(strtest)
 
 
 #Displays win-loss of the past 10 games
-@midBot.command(pass_context=True)
-@asyncio.coroutine
-def last10(ctx, *args):
+@MIDBot.command(pass_context=True)
+async def last10(ctx, *args):
     if len(args) == 1: # a username has been given, look up that name
-        yield from midBot.say((LeagueStats.last10Games(args[0])))
+        await ctx.send(LeagueStats.last10Games(args[0]))
     elif len(args) == 0: #no username has been given
         sql = "select summoner from discordinfo where discordName='" + str(
             ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" # construct sql query
@@ -47,22 +43,20 @@ def last10(ctx, *args):
         try:
             username = cur.fetchall() #use what the database returns to look up stats
             print(str(username[0][0]).rstrip())
-            yield from midBot.say(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+            await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
         except:
             print("failed to fetch username")
     else: #error
-        yield from midBot.say("Too many parameters")
+        await ctx.send("Too many parameters")
 
 #In progress
-@midBot.command()
-@asyncio.coroutine
-def ranking(*args):
+@MIDBot.command()
+async def ranking(*args):
     print(args)
 
 #Insert user into database
-@midBot.command(pass_context=True)
-@asyncio.coroutine
-def setup(ctx, *args):
+@MIDBot.command(pass_context=True)
+async def setup(ctx, *args):
     member = ctx.message.author
     print(member) #log messages
     print(ctx.message)
@@ -80,15 +74,14 @@ def setup(ctx, *args):
                 print(row) #log user in database
         except: #error
             print("didnt select")
-        yield from midBot.say("Tied @" + str(member) + " to " + args[0]) #success
+        await ctx.send("Tied @" + str(member) + " to " + args[0]) #success
         # print(cur.fetchall)
     except: #error
         print("didn't insert")
 
 
-@midBot.command(pass_context=True)
-@asyncio.coroutine
-def predict(ctx, *args):
+@MIDBot.command(pass_context=True)
+async def predict(ctx, *args):
     print(args)
     print(len(args))
     username = ctx.message.author
@@ -106,18 +99,17 @@ def predict(ctx, *args):
                 rows = cur.fetchall()
                 for row in rows:
                     print("                                            ", row)
-                yield from midBot.say("Stored @" + str(username) + "'s prediction")
+                await ctx.send("Stored @" + str(username) + "'s prediction")
             except:
                 print("didnt select")
         except:
             print("failed to insert")
     else:
-        yield from midBot.say("Please list 10 teams")
+        await ctx.send("Please list 10 teams")
 
 #Displays a table into server of players fantasy score
-@midBot.command()
-@asyncio.coroutine
-def fantasy():
+@MIDBot.command(pass_context=True)
+async def fantasy(ctx, *args):
     # Starts formatting
     result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | Score  \n" \
              "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
@@ -147,14 +139,13 @@ def fantasy():
     except: #error
         print("didn't fetch")
     result += "```" #finish formatting
-    yield from midBot.say(result) #output
+    await ctx.send(result) #output
 
 #displays stats about players last game
-@midBot.command(pass_context=True)
-@asyncio.coroutine
-def lastgame(ctx, *args):
+@MIDBot.command(pass_context=True)
+async def lastgame(ctx, *args):
     if len(args) == 1: # username been given
-        yield from midBot.say((LeagueStats.lastGame(args[0])))
+        await ctx.send((LeagueStats.lastGame(args[0])))
     elif len(args) == 0: #no username been given, user default
         sql = "select summoner from discordinfo where discordName='" + str(
             ctx.message.author) + "' and serverID=" + str(ctx.message.server.id) + ";" #construct sql query
@@ -169,16 +160,15 @@ def lastgame(ctx, *args):
         except: #error
             print("failed to fetch username")
         try: #output
-            yield from midBot.say(LeagueStats.lastGame(str(username[0][0]).rstrip()))
+            await ctx.send(LeagueStats.lastGame(str(username[0][0]).rstrip()))
         except: #error
             print ("stats problem")
     else: #error
-        yield from midBot.say("Too many parameters")
+        await ctx.send("Too many parameters")
 
 #lists all commands
-@midBot.command()
-@asyncio.coroutine
-def commands():
+@MIDBot.command()
+async def commands():
     commands = """List of commands : \n
                   !setup <League of Legends Summoner Name>
                   \t - Ties your discord account to your League of Legends account \n
@@ -196,12 +186,15 @@ def commands():
                   \t - Lists all possible commands
                """
 
-    yield from midBot.say(commands)
+    await ctx.send(commands)
 
 #inprogress
-@midBot.command()
-@asyncio.coroutine
-def lcs():
-    yield from midBot.say("123")
+@MIDBot.command()
+async def lcs():
+    await ctx.send("123")
 
-midBot.run(botinfo.BOT_TOKEN)
+if __name__ == '__main__':
+    discordTokens = utility.config(section='discord')
+    # print(discordTokens)
+    # MIDBot.login(discordTokens['bot_token'])
+    MIDBot.run(discordTokens['bot_token'])

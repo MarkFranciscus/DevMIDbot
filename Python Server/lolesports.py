@@ -1,7 +1,6 @@
 import requests, json
 import time
 import psycopg2
-from configparser import ConfigParser
 from utility import connect_database
 
 tournamentURL = "http://api.lolesports.com/api/v1/scheduleItems?leagueId={}"
