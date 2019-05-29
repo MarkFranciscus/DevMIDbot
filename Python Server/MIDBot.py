@@ -11,6 +11,7 @@ regions = ["NA", "KR", "EU", "CN"]
 
 @MIDBot.event
 async def on_ready():
+    global cur 
     cur = utility.connect_database()
 
 @MIDBot.event
@@ -53,12 +54,14 @@ async def last10(ctx, *args):
     else: #error
         await ctx.send("Too many parameters")
 
-#In progress
+
+# In progress
 @MIDBot.command()
 async def ranking(*args):
     print(args)
 
-#Insert user into database
+
+# Insert user into database
 @MIDBot.command(pass_context=True)
 async def setup(ctx, *args):
     member = ctx.message.author
@@ -88,8 +91,10 @@ async def setup(ctx, *args):
 async def pickem(ctx, *args):
     # print(args[0])
     # print(len(args))
+    global cur
     username = str(ctx.message.author)
     region = args[0]
+    print(cur)
     # print(username)
     if len(args) == 11:
         if args[0].upper() in regions:
@@ -97,18 +102,18 @@ async def pickem(ctx, *args):
             print(regionSQL)
             try:
                 cur.execute(regionSQL)
-            except:
-                print("failed execute")
+            except(Exception, psycopg2.Error) as error:
+                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+                print("failed execute", error)
 
             try:
-                splitID = cur.fetchall()
-                print(splitID)
+                splitID = cur.fetchall()[0][0]
             except:
                 print("failed to find region")
-            # sql = "INSERT INTO pickems VALUES ('" + str(username) + "', '" + ctx.message.guild.id + "', '" + splitID + "', '" + args[0] + "', '" + args[1] + "', '" + args[
-            #     2] + "', '" + args[3] + "', '" + args[4] + "', '" + args[5] + "', '" + args[6] + "', '" + args[7] + "', '" + \
-            #     args[8] + "', '" + args[9] + "', '" + args[10] + "');"
-            pickemSQL = "INSERT INTO pickems VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');".format(username, ctx.message.guild.id, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9],)
+                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+
+            pickemSQL = "INSERT INTO pickems VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}');".format(
+                username, ctx.message.guild.id, splitID, args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10])
             print(pickemSQL)
             try:
                 print(cur.execute(pickemSQL))
@@ -118,49 +123,54 @@ async def pickem(ctx, *args):
                 #     rows = cur.fetchall()
                 #     for row in rows:
                 #         print("                                            ", row)
-                #     await ctx.send("Stored {}".format(ctx.message.author.mention()) + "'s prediction")
+                await ctx.send("Stored {}'s prediction".format(ctx.message.author.mention))
                 # except:
                 #     print("didnt select")
-            except:
-                print("failed to insert")
+            except(Exception, psycopg2.Error) as error:
+                print("failed execute", error)
+                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
         else:
             await ctx.send("{} give a valid region".format(ctx.message.author.mention()))
     else:
         await ctx.send("Please list 10 teams")
 
-#Displays a table into server of players fantasy score
+
+# Displays a table into server of players fantasy score
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
     # Starts formatting
-    result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | Score  \n" \
+    result = "Fantasy Predictions \n\n ```Username                |   1   |   2   |   3   |   4   |   5   |   6   |   7   |   8   |   9   |  10   |  Score  \n" \
              "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
-
-    sql = "select * from ranking;"
+    pickemSQL = "select * from pickems;"
     try: #recieve table
-        cur.execute(sql)
+        cur.execute(pickemSQL)
     except: #error
         print("didn't select")
     try:
         #format by going row by row
         rows = cur.fetchall()
+        print(rows)
         for i in range(len(rows)):
-            for item in rows[i]:
-                if len(item) > 3:
-                    result += item.ljust(23) + " | " #pad username
-                elif len(item) == 3:
-                    result += item + " | "#delimiter
+            for j in range(len(rows[i])):
+                if j in [1, 2]:
+                    continue
                 else:
-                    result += item + "  | " #delimiter
+                    item = str(rows[i][j])
+                    if len(item) > 4:
+                        result += item.ljust(23) + " | " #pad username
+                    elif len(item) == 3:
+                        result += item + " | "#delimiter
+                    else:
+                        result += item + "  | " #delimiter
             if i < len(rows) - 1:
                 result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
             else: #last row
                 result += "\n-------------------------------------------------------------------------------------\n"
+        result += "```" #finish formatting
+        await ctx.send(result) #output
+    except:
+       await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues") 
 
-
-    except: #error
-        print("didn't fetch")
-    result += "```" #finish formatting
-    await ctx.send(result) #output
 
 # displays stats about players last game
 # TODO doesn't work
@@ -188,9 +198,10 @@ async def lastgame(ctx, *args):
     else: #error
         await ctx.send("Too many parameters")
 
-#lists all commands
+
+# lists all commands
 @MIDBot.command()
-async def commands():
+async def commands(ctx):
     commands = """List of commands : \n
                   !setup <League of Legends Summoner Name>
                   \t - Ties your discord account to your League of Legends account \n
@@ -210,10 +221,12 @@ async def commands():
 
     await ctx.send(commands)
 
-#inprogress
+
+# inprogress
 @MIDBot.command()
-async def lcs():
+async def lcs(ctx):
     await ctx.send("123")
+
 
 if __name__ == '__main__':
     discordTokens = utility.config(section='discord')

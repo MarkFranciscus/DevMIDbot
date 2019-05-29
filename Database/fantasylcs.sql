@@ -103,4 +103,7 @@ CREATE TABLE standings (
 
 insert into splits values (1, 'LCS 2019 Spring Split', 'NA', 'lcs_2019_spring', true)
 
-SELECT splitID FROM splits WHERE region = 'NA' AND isCurrent = true;
+
+--SELECT splitID FROM splits WHERE region = '{}' AND isCurrent = true;
+--SELECT splitID FROM splits WHERE region = 'NA' AND isCurrent = true;
+--SELECT * FROM splits;

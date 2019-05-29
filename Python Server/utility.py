@@ -33,7 +33,7 @@ def connect_database():
         # connect to the PostgreSQL server
         print('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(**params)
-      
+        conn.autocommit = True
         # create a cursor
         cur = conn.cursor()
         
