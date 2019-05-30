@@ -94,15 +94,26 @@ async def pickem(ctx, *args):
     global cur
     username = str(ctx.message.author)
     region = args[0]
-    print(cur)
-    # print(username)
-    if len(args) == 1:
+
+    # Format pickem table
+    if len(args) == 1:        
+        # SQL to get split id for given region
+        regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region.upper())
+        try:
+            cur.execute(regionSQL)
+            try:
+                splitID = cur.fetchall()[0][0]
+            except:
+                print("Failed to find region")
+                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+        except(Exception, psycopg2.Error) as error:
+            await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+            print("failed execute", error)
         
-        splitID = getsplitID(ctx, args[0])
         # Starts formatting
         result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10 |  Score  |\n" \
                 "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-        pickemSQL = "select * from pickems where splitID = {};".format(splitID)
+        pickemSQL = "select * from pickems where splitID = {} and serverID = {};".format(splitID, ctx.message.guild.id)
         try: #recieve table
             cur.execute(pickemSQL)
         except: #error
@@ -110,23 +121,24 @@ async def pickem(ctx, *args):
         try:
             #format by going row by row
             rows = cur.fetchall()
-            print(rows)
             for i in range(len(rows)):
-                score = 0
+                score = 0 # TODO score function
+                # Format pickem row
                 for j in range(len(rows[i])):
+                    # Ignore serverID and splitID
                     if j in [1, 2]:
                         continue
                     else:
-                        item = str(rows[i][j])
-                        if len(item) > 4:
-                            result += item.ljust(23) + " |" #pad username
+                        column = str(rows[i][j])
+                        if len(column) > 4:
+                            result += column.ljust(23) + " |" #pad username
                         else:
-                            result += "{:^5}".format(item)
+                            result += "{:^5}".format(column)
                             result += "|"#delimiter
-                        # else:
-                        #     result += item + "  | " #delimiter
+                # End row with score
                 result += "{:^9}".format(str(score)) + "|"    
-                if i < len(rows) - 1:
+                # row seperator
+                if i < len(rows) - 1: 
                     result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\"*n"
                 else: #last row
                     result += "\n{:-^94}|\n".format("")
@@ -179,7 +191,7 @@ async def pickem(ctx, *args):
 # TODO change to !pickem command with <region> parameter
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
-    pass 
+    pass
 
 
 # displays stats about players last game
@@ -215,14 +227,10 @@ async def commands(ctx):
     commands = """List of commands : \n
                   !setup <League of Legends Summoner Name>
                   \t - Ties your discord account to your League of Legends account \n
-                  !shitter
-                  \t - Outs the shitter of the sever \n
-                  !last10 <Summoner Name>
-                  \t - Win - Loss of the most recent 10 games of a League of Legends account \n
-                  !predict <team> <team> <team> <team> <team> <team> <team> <team> <team> <team>
+                  !pickem <region[NA, EU, KR, CN]> <team> <team> <team> <team> <team> <team> <team> <team> <team> <team>
                   \t - Stores LCS prediction \n
-                  !lastgame <Summoner Name>
-                  \t - Displays details of last ranked game \n
+                  !pickem <region[NA, EU, KR, CN]>
+                  \t - Shows LCS predictions on server for given region
                   !fantasy
                   \t - Displays all LCS predictions \n
                   !commands
@@ -236,21 +244,6 @@ async def commands(ctx):
 @MIDBot.command()
 async def lcs(ctx):
     await ctx.send("123")
-
-async def getsplitID(ctx, region):
-    global cur
-    regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region)
-    try:
-        cur.execute(regionSQL)
-    except(Exception, psycopg2.Error) as error:
-        await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
-        print("failed execute", error)
-
-    try:
-        splitID = cur.fetchall()[0][0]
-    except:
-        print("failed to find region")
-        await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
 
 
 if __name__ == '__main__':
