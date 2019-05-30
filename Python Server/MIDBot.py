@@ -96,9 +96,48 @@ async def pickem(ctx, *args):
     region = args[0]
     print(cur)
     # print(username)
-    if len(args) == 11:
+    if len(args) == 1:
+        
+        splitID = getsplitID(ctx, args[0])
+        # Starts formatting
+        result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10 |  Score  |\n" \
+                "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
+        pickemSQL = "select * from pickems where splitID = {};".format(splitID)
+        try: #recieve table
+            cur.execute(pickemSQL)
+        except: #error
+            print("didn't select")
+        try:
+            #format by going row by row
+            rows = cur.fetchall()
+            print(rows)
+            for i in range(len(rows)):
+                score = 0
+                for j in range(len(rows[i])):
+                    if j in [1, 2]:
+                        continue
+                    else:
+                        item = str(rows[i][j])
+                        if len(item) > 4:
+                            result += item.ljust(23) + " |" #pad username
+                        else:
+                            result += "{:^5}".format(item)
+                            result += "|"#delimiter
+                        # else:
+                        #     result += item + "  | " #delimiter
+                result += "{:^9}".format(str(score)) + "|"    
+                if i < len(rows) - 1:
+                    result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\"*n"
+                else: #last row
+                    result += "\n{:-^94}|\n".format("")
+            result += "```" #finish formatting
+            await ctx.send(result) #output
+        except:
+            await ctx.send("""Oopsies I messed up, I already let the dumb dev know, but please create a git issue describing the issue! 
+                            https://github.com/MarkFranciscus/DevMIDbot/issues""")
+    elif len(args) == 11:
         if args[0].upper() in regions:
-            regionSQL = "SELECT splitID FROM splits WHERE region = '{}' AND isCurrent = true;".format(region)
+            regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region)
             print(regionSQL)
             try:
                 cur.execute(regionSQL)
@@ -128,7 +167,8 @@ async def pickem(ctx, *args):
                 #     print("didnt select")
             except(Exception, psycopg2.Error) as error:
                 print("failed execute", error)
-                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+                await ctx.send("""Oopsies I messed up, I already let the dumb dev know, but please create a git issue describing the issue! 
+                            https://github.com/MarkFranciscus/DevMIDbot/issues""")
         else:
             await ctx.send("{} give a valid region".format(ctx.message.author.mention()))
     else:
@@ -136,40 +176,10 @@ async def pickem(ctx, *args):
 
 
 # Displays a table into server of players fantasy score
+# TODO change to !pickem command with <region> parameter
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
-    # Starts formatting
-    result = "Fantasy Predictions \n\n ```Username                |   1   |   2   |   3   |   4   |   5   |   6   |   7   |   8   |   9   |  10   |  Score  \n" \
-             "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
-    pickemSQL = "select * from pickems;"
-    try: #recieve table
-        cur.execute(pickemSQL)
-    except: #error
-        print("didn't select")
-    try:
-        #format by going row by row
-        rows = cur.fetchall()
-        print(rows)
-        for i in range(len(rows)):
-            for j in range(len(rows[i])):
-                if j in [1, 2]:
-                    continue
-                else:
-                    item = str(rows[i][j])
-                    if len(item) > 4:
-                        result += item.ljust(23) + " | " #pad username
-                    elif len(item) == 3:
-                        result += item + " | "#delimiter
-                    else:
-                        result += item + "  | " #delimiter
-            if i < len(rows) - 1:
-                result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----|\n"
-            else: #last row
-                result += "\n-------------------------------------------------------------------------------------\n"
-        result += "```" #finish formatting
-        await ctx.send(result) #output
-    except:
-       await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues") 
+    pass 
 
 
 # displays stats about players last game
@@ -226,6 +236,21 @@ async def commands(ctx):
 @MIDBot.command()
 async def lcs(ctx):
     await ctx.send("123")
+
+async def getsplitID(ctx, region):
+    global cur
+    regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region)
+    try:
+        cur.execute(regionSQL)
+    except(Exception, psycopg2.Error) as error:
+        await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+        print("failed execute", error)
+
+    try:
+        splitID = cur.fetchall()[0][0]
+    except:
+        print("failed to find region")
+        await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
 
 
 if __name__ == '__main__':
