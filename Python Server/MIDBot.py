@@ -4,7 +4,7 @@ import psycopg2
 from discord.ext.commands import Bot
 import utility
 
-MIDBot = Bot(command_prefix="!")
+MIDBot = Bot(command_prefix="!", case_insensitive=True)
 cur = None
 regions = ["NA", "KR", "EU", "CN"]
 
@@ -68,19 +68,11 @@ async def setup(ctx, *args):
     print(member) #log messages
     print(ctx.message)
     print(args)
-    try: #insert user into database
-        sql = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(
+    setupSQL = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(
             ctx.message.guild.id) + ");"
-        print(sql)
-        print(cur.execute(sql))
-        try:
-            sql = "select * from discordinfo;"
-            cur.execute(sql)
-            rows = cur.fetchall()
-            for row in rows:
-                print(row) #log user in database
-        except: #error
-            print("didnt select")
+    print(setupSQL)
+    try: #insert user into database
+        print(cur.execute(setupSQL))
         await ctx.send("Tied @" + str(member) + " to " + args[0]) #success
         # print(cur.fetchall)
     except: #error
