@@ -1,5 +1,5 @@
 import asyncio
-import LeagueStats
+# import LeagueStats
 import psycopg2
 from discord.ext.commands import Bot
 import utility
@@ -33,26 +33,26 @@ async def test(ctx, *args):
 
 # Displays win-loss of the past 10 games
 # TODO doesn't work
-@MIDBot.command(pass_context=True)
-async def last10(ctx, *args):
-    if len(args) == 1: # a username has been given, look up that name
-        await ctx.send(LeagueStats.last10Games(args[0]))
-    elif len(args) == 0: #no username has been given
-        sql = "select summoner from discordinfo where discordName='" + str(
-            ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
-        print(sql) # log it
-        try:
-            cur.execute(sql) #execute sql query
-        except:
-            print("failed to find username")
-        try:
-            username = cur.fetchall() #use what the database returns to look up stats
-            print(str(username[0][0]).rstrip())
-            await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
-        except:
-            print("failed to fetch username")
-    else: #error
-        await ctx.send("Too many parameters")
+# @MIDBot.command(pass_context=True)
+# async def last10(ctx, *args):
+    # if len(args) == 1: # a username has been given, look up that name
+    #     await ctx.send(LeagueStats.last10Games(args[0]))
+    # elif len(args) == 0: #no username has been given
+    #     sql = "select summoner from discordinfo where discordName='" + str(
+    #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
+    #     print(sql) # log it
+    #     try:
+    #         cur.execute(sql) #execute sql query
+    #     except:
+    #         print("failed to find username")
+    #     try:
+    #         username = cur.fetchall() #use what the database returns to look up stats
+    #         print(str(username[0][0]).rstrip())
+    #         await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+    #     except:
+    #         print("failed to fetch username")
+    # else: #error
+    #     await ctx.send("Too many parameters")
 
 
 # In progress
@@ -196,29 +196,29 @@ async def fantasy(ctx, *args):
 
 # displays stats about players last game
 # TODO doesn't work
-@MIDBot.command(pass_context=True)
-async def lastgame(ctx, *args):
-    if len(args) == 1: # username been given
-        await ctx.send((LeagueStats.lastGame(args[0])))
-    elif len(args) == 0: #no username been given, user default
-        sql = "select summoner from discordinfo where discordName='" + str(
-            ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
-        print(sql)
-        try:
-            cur.execute(sql) # execute sql query
-        except:
-            print("failed to find username") #error
-        try:
-            username = cur.fetchall() #fetch
-            print(str(username[0][0]).rstrip())
-        except: #error
-            print("failed to fetch username")
-        try: #output
-            await ctx.send(LeagueStats.lastGame(str(username[0][0]).rstrip()))
-        except: #error
-            print ("stats problem")
-    else: #error
-        await ctx.send("Too many parameters")
+# @MIDBot.command(pass_context=True)
+# async def lastgame(ctx, *args):
+#     if len(args) == 1: # username been given
+#         await ctx.send((LeagueStats.lastGame(args[0])))
+#     elif len(args) == 0: #no username been given, user default
+#         sql = "select summoner from discordinfo where discordName='" + str(
+#             ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
+#         print(sql)
+#         try:
+#             cur.execute(sql) # execute sql query
+#         except:
+#             print("failed to find username") #error
+#         try:
+#             username = cur.fetchall() #fetch
+#             print(str(username[0][0]).rstrip())
+#         except: #error
+#             print("failed to fetch username")
+#         try: #output
+#             await ctx.send(LeagueStats.lastGame(str(username[0][0]).rstrip()))
+#         except: #error
+#             print ("stats problem")
+#     else: #error
+#         await ctx.send("Too many parameters")
 
 
 # lists all commands
