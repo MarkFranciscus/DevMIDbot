@@ -3,6 +3,7 @@ import asyncio
 import psycopg2
 from discord.ext.commands import Bot
 import utility
+import lolesports
 
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
 cur = None
@@ -114,7 +115,7 @@ async def pickem(ctx, *args):
             #format by going row by row
             rows = cur.fetchall()
             for i in range(len(rows)):
-                score = 0 # TODO score function
+                score = lolesports.score(rows[i][3:], lolesports.get_standings("lcs_2019_summer")) # TODO score function
                 # Format pickem row
                 for j in range(len(rows[i])):
                     # Ignore serverID and splitID
@@ -136,9 +137,10 @@ async def pickem(ctx, *args):
                     result += "\n{:-^94}|\n".format("")
             result += "```" #finish formatting
             await ctx.send(result) #output
-        except:
+        except(Exception, psycopg2.Error) as error:
             await ctx.send("""Oopsies I messed up, I already let the dumb dev know, but please create a git issue describing the issue! 
                             https://github.com/MarkFranciscus/DevMIDbot/issues""")
+            print(error)
     elif len(args) == 11:
         if args[0].upper() in regions:
             regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region)
