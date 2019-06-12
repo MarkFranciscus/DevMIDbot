@@ -94,15 +94,10 @@ async def pickem(ctx, *args):
         regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region.upper())
         try:
             cur.execute(regionSQL)
-            try:
-                splitID = cur.fetchall()[0][0]
-            except:
-                print("Failed to find region")
-                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
         except(Exception, psycopg2.Error) as error:
             await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
             print("failed execute", error)
-        
+        splitID = cur.fetchall()[0][0]        
         # Starts formatting
         result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10 |  Score  |\n" \
                 "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
@@ -111,36 +106,36 @@ async def pickem(ctx, *args):
             cur.execute(pickemSQL)
         except: #error
             print("didn't select")
-        try:
-            #format by going row by row
-            rows = cur.fetchall()
-            for i in range(len(rows)):
-                score = lolesports.score(rows[i][3:], lolesports.get_standings("lcs_2019_summer")) # TODO score function
-                # Format pickem row
-                for j in range(len(rows[i])):
-                    # Ignore serverID and splitID
-                    if j in [1, 2]:
-                        continue
+        #format by going row by row
+        rows = cur.fetchall()
+        for i in range(len(rows)):
+            score = lolesports.score(rows[i][3:], lolesports.get_standings("lcs_2019_summer")) # TODO score function
+            # Format pickem row
+            for j in range(len(rows[i])):
+                # Ignore serverID and splitID
+                if j in [1, 2]:
+                    continue
+                else:
+                    column = str(rows[i][j])
+                    if len(column) > 4:
+                        result += column.ljust(23) + " |" #pad username
                     else:
-                        column = str(rows[i][j])
-                        if len(column) > 4:
-                            result += column.ljust(23) + " |" #pad username
-                        else:
-                            result += "{:^5}".format(column)
-                            result += "|"#delimiter
-                # End row with score
-                result += "{:^9}".format(str(score)) + "|"    
-                # row seperator
-                if i < len(rows) - 1: 
-                    result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-                else: #last row
-                    result += "\n{:-^94}|\n".format("")
-            result += "```" #finish formatting
-            await ctx.send(result) #output
-        except(Exception, psycopg2.Error) as error:
-            await ctx.send("""Oopsies I messed up, I already let the dumb dev know, but please create a git issue describing the issue! 
-                            https://github.com/MarkFranciscus/DevMIDbot/issues""")
-            print(error)
+                        result += "{:^5}".format(column)
+                        result += "|"#delimiter
+            # End row with score
+            result += "{:^9}".format(str(score)) + "|"    
+            # row seperator
+            if i < len(rows) - 1: 
+                result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
+            else: #last row
+                result += "Standings".ljust(23) + " |" #pad username
+                standings = lolesports.format_standing_list(lolesports.get_standings("lcs_2019_summer"))
+                for team in standings:
+                    result += "{:^5}".format(team)
+                    result += "|"#delimiter
+                result += "\n{:-^94}|\n".format("")
+        result += "```" #finish formatting
+        await ctx.send(result) #output
     elif len(args) == 11:
         if args[0].upper() in regions:
             regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region)

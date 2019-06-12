@@ -60,4 +60,8 @@ def score(players_standings, real_standings):
     for i in range(1, 10, 1):
         score += (i - real_standings[players_standings[i]])**2
     return score
-# print(get_standings("lcs_2019_summer"))
+
+def format_standing_list(standings):
+    temp = dict((v,k) for k,v in standings.items())
+    print(temp)
+    return [standings[i] for i in range(1, 10)]
