@@ -59,6 +59,7 @@ def score(players_standings, real_standings):
     score = 0
     for i in range(1, 10, 1):
         score += (i - real_standings[players_standings[i]])**2
+        print(score)
     return score
 
 def format_standing_list(standings):

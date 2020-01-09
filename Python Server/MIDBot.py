@@ -183,7 +183,7 @@ async def fantasy(ctx, *args):
     if args[0].lower() == "start": 
         await ctx.send("Starting draft")
         channel = ctx.channel
-        MIDBot.loop.create_task(draft_timer(channel))
+        # MIDBot.loop.create_task(draft_timer(channel))
     elif args[0].lower() == "create":
         pass
     elif args[0].lower() == "join":
@@ -191,17 +191,17 @@ async def fantasy(ctx, *args):
     
 
 
-async def draft_timer(channel):
-    numSeconds = 10
-    print(channel)
-    message = "Timer: {}".format(str(numSeconds))
-    timer = await channel.send(message)
-    await asyncio.sleep(1)
-    while numSeconds > 0:
-        numSeconds -= 1
-        newMessage = "Timer: {}".format(str(numSeconds))
-        await timer.edit(content=newMessage)
-        await asyncio.sleep(1)
+# async def draft_timer(channel):
+#     numSeconds = 10
+#     print(channel)
+#     message = "Timer: {}".format(str(numSeconds))
+#     timer = await channel.send(message)
+#     await asyncio.sleep(1)
+#     while numSeconds > 0:
+#         numSeconds -= 1
+#         newMessage = "Timer: {}".format(str(numSeconds))
+#         await timer.edit(content=newMessage)
+#         await asyncio.sleep(1)
 
 # displays stats about players last game
 # TODO doesn't work
