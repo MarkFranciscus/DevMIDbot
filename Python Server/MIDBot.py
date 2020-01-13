@@ -1,19 +1,31 @@
 import asyncio
-# import LeagueStats
-import psycopg2
 from discord.ext.commands import Bot
+
 import utility
 import lolesports
 
+import sqlalchemy
+from sqlalchemy.sql import and_, text
+from sqlalchemy.orm import Session
+from sqlalchemy.ext.automap import automap_base
+
+# import LeagueStats
+# import psycopg2
+
+Base, engine = None, None
+
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
-cur = None
+
 regions = ["NA", "KR", "EU", "CN"]
 
 
 @MIDBot.event
 async def on_ready():
-    global cur 
-    cur = utility.connect_database()
+    global Base, engine
+
+    Base, engine = utility.connect_database()
+    print("Connected")
+
 
 @MIDBot.event
 async def on_read():
@@ -25,7 +37,7 @@ async def on_read():
 async def test(ctx, *args):
     strtest = "```"
     # for i in range(10):
-        # strtest += str('%d\n' % (i))
+    # strtest += str('%d\n' % (i))
     # print(strtest)
     strtest += str(ctx.message.guild.id)
     strtest += '```'
@@ -43,11 +55,11 @@ async def test(ctx, *args):
     #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
     #     print(sql) # log it
     #     try:
-    #         cur.execute(sql) #execute sql query
+    #         conn.execute(sql) #execute sql query
     #     except:
     #         print("failed to find username")
     #     try:
-    #         username = cur.fetchall() #use what the database returns to look up stats
+    #         username = conn.fetchall() #use what the database returns to look up stats
     #         print(str(username[0][0]).rstrip())
     #         await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
     #     except:
@@ -66,88 +78,103 @@ async def ranking(*args):
 @MIDBot.command(pass_context=True)
 async def setup(ctx, *args):
     member = ctx.message.author
-    print(member) #log messages
+    print(member)  # log messages
     print(ctx.message)
     print(args)
     setupSQL = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(
-            ctx.message.guild.id) + ");"
+        ctx.message.guild.id) + ");"
     print(setupSQL)
-    try: #insert user into database
-        print(cur.execute(setupSQL))
-        await ctx.send("Tied @" + str(member) + " to " + args[0]) #success
-        # print(cur.fetchall)
-    except: #error
+    try:  # insert user into database
+        print(conn.execute(setupSQL))
+        await ctx.send("Tied @" + str(member) + " to " + args[0])  # success
+        # print(conn.fetchall)
+    except:  # error
         print("didn't insert")
 
 
 @MIDBot.command(pass_context=True)
 async def pickem(ctx, *args):
-    # print(args[0])
-    # print(len(args))
-    global cur
+    global Base, engine
     username = str(ctx.message.author)
     region = args[0]
+    region_result = None
+    session = Session(engine)
 
     # Format pickem table
-    if len(args) == 1:        
+    if len(args) == 1:
+        Splits = Base.classes.splits
+        Pickems = Base.classes.pickems
+
         # SQL to get split id for given region
-        regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region.upper())
-        try:
-            cur.execute(regionSQL)
-        except(Exception, psycopg2.Error) as error:
-            await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
-            print("failed execute", error)
-        splitID = cur.fetchall()[0][0]        
+        region_result = session.query(Splits.splitid).filter(
+            and_(Splits.iscurrent, Splits.region.match(region))).all()
+
+        # print("splitID", region_result)
+        for row in region_result:
+            splitID = row.splitid
+
         # Starts formatting
         result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10 |  Score  |\n" \
-                "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-        pickemSQL = "select * from pickems where splitID = {} and serverID = {};".format(splitID, ctx.message.guild.id)
-        try: #recieve table
-            cur.execute(pickemSQL)
-        except: #error
-            print("didn't select")
-        #format by going row by row
-        rows = cur.fetchall()
-        for i in range(len(rows)):
-            score = lolesports.score(rows[i][3:], lolesports.get_standings("lcs_2019_summer")) # TODO score function
+            "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
+
+        pickemSQL = "select * from pickems where splitID = {} and serverID = {};".format(
+            splitID, ctx.message.guild.id)
+
+        pickem_result = session.query(Pickems).filter(
+            and_(Pickems.splitid == splitID, Pickems.serverid == ctx.message.guild.id)).all()
+
+        # format by going row by row
+        for row in pickem_result:
+            i = 0
+            standings = [row.one, row.two, row.three, row.four,
+                         row.five, row.six, row.seven, row.eight, row.nine, row.ten]
+            score = lolesports.score(standings, lolesports.get_standings(
+                "lcs_2019_summer"))  # TODO score function
+            standings = [row.username] + standings
             # Format pickem row
-            for j in range(len(rows[i])):
-                # Ignore serverID and splitID
-                if j in [1, 2]:
-                    continue
+            for j in range(len(standings)):
+
+                column = str(standings[j])
+                if j == 0:
+                    result += column.ljust(23) + " |"  # pad username
                 else:
-                    column = str(rows[i][j])
-                    if len(column) > 4:
-                        result += column.ljust(23) + " |" #pad username
-                    else:
-                        result += "{:^5}".format(column)
-                        result += "|"#delimiter
+                    result += "{:^5}".format(column)
+                    result += "|"  # delimiter
+
             # End row with score
-            result += "{:^9}".format(str(score)) + "|"    
+            result += "{:^9}".format(str(score)) + "|"
+
             # row seperator
-            if i < len(rows) - 1: 
+            if i < len(standings) - 1:
                 result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-            else: #last row
-                result += "Standings".ljust(23) + " |" #pad username
-                standings = lolesports.format_standing_list(lolesports.get_standings("lcs_2019_summer"))
-                for team in standings:
-                    result += "{:^5}".format(team)
-                    result += "|"#delimiter
-                result += "\n{:-^94}|\n".format("")
-        result += "```" #finish formatting
-        await ctx.send(result) #output
+
+            i += 1
+        
+        result += "Standings".ljust(23) + " |"  # pad username
+        standings = lolesports.format_standing_list(
+            lolesports.get_standings("lcs_2019_summer"))
+        for team in standings:
+            result += "{:^5}".format(team)
+            result += "|"  # delimiter
+        result += "{:^9}".format('0') + "|"        
+
+        result += "\n{:-^94}|\n".format("")
+        result += "```"  # finish formatting
+        await ctx.send(result)  # output
+
     elif len(args) == 11:
         if args[0].upper() in regions:
-            regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isCurrent = true;".format(region)
+            regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isconnrent = true;".format(
+                region)
             print(regionSQL)
             try:
-                cur.execute(regionSQL)
+                conn.execute(regionSQL)
             except(Exception, psycopg2.Error) as error:
                 await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
                 print("failed execute", error)
 
             try:
-                splitID = cur.fetchall()[0][0]
+                splitID = conn.fetchall()[0][0]
             except:
                 print("failed to find region")
                 await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
@@ -156,11 +183,11 @@ async def pickem(ctx, *args):
                 username, ctx.message.guild.id, splitID, args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10])
             print(pickemSQL)
             try:
-                print(cur.execute(pickemSQL))
+                print(conn.execute(pickemSQL))
                 # try:
                 #     sql = "select * from ranking;"
-                #     cur.execute(sql)
-                #     rows = cur.fetchall()
+                #     conn.execute(sql)
+                #     rows = conn.fetchall()
                 #     for row in rows:
                 #         print("                                            ", row)
                 await ctx.send("Stored {}'s prediction".format(ctx.message.author.mention))
@@ -180,7 +207,7 @@ async def pickem(ctx, *args):
 # TODO change to !pickem command with <region> parameter
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
-    if args[0].lower() == "start": 
+    if args[0].lower() == "start":
         await ctx.send("Starting draft")
         channel = ctx.channel
         # MIDBot.loop.create_task(draft_timer(channel))
@@ -188,7 +215,6 @@ async def fantasy(ctx, *args):
         pass
     elif args[0].lower() == "join":
         pass
-    
 
 
 # async def draft_timer(channel):
@@ -214,11 +240,11 @@ async def fantasy(ctx, *args):
 #             ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
 #         print(sql)
 #         try:
-#             cur.execute(sql) # execute sql query
+#             conn.execute(sql) # execute sql query
 #         except:
 #             print("failed to find username") #error
 #         try:
-#             username = cur.fetchall() #fetch
+#             username = conn.fetchall() #fetch
 #             print(str(username[0][0]).rstrip())
 #         except: #error
 #             print("failed to fetch username")

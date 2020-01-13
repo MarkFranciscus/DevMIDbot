@@ -30,10 +30,12 @@ def get_standings(region):
     teams = rawData["teams"]
     result = {}
     num_teams = 1
-    for i in range(1, 10, 1):
+    print(standings)
+    for i in range(1, 11, 1):
         for x in standings[i]:
             result[x] = num_teams
         num_teams += len(standings[i])
+    print(result)
     return result
 
 def find_current_split(region):
@@ -59,10 +61,10 @@ def score(players_standings, real_standings):
     score = 0
     for i in range(1, 10, 1):
         score += (i - real_standings[players_standings[i]])**2
-        print(score)
+        # print(score)
     return score
 
 def format_standing_list(standings):
     temp = dict((v,k) for k,v in standings.items())
-    print(temp)
-    return [standings[i] for i in range(1, 10)]
+    # print("temp", temp)
+    return [temp[i] for i in range(1, 11)]
