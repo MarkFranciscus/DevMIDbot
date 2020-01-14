@@ -1,4 +1,7 @@
 import asyncio
+from asyncio import sleep
+import time
+
 from discord.ext.commands import Bot
 
 import utility
@@ -22,7 +25,6 @@ regions = ["NA", "KR", "EU", "CN"]
 @MIDBot.event
 async def on_ready():
     global Base, engine
-
     Base, engine = utility.connect_database()
     print("Connected")
 
@@ -42,30 +44,6 @@ async def test(ctx, *args):
     strtest += str(ctx.message.guild.id)
     strtest += '```'
     await ctx.send(strtest)
-
-
-# Displays win-loss of the past 10 games
-# TODO doesn't work
-# @MIDBot.command(pass_context=True)
-# async def last10(ctx, *args):
-    # if len(args) == 1: # a username has been given, look up that name
-    #     await ctx.send(LeagueStats.last10Games(args[0]))
-    # elif len(args) == 0: #no username has been given
-    #     sql = "select summoner from discordinfo where discordName='" + str(
-    #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
-    #     print(sql) # log it
-    #     try:
-    #         conn.execute(sql) #execute sql query
-    #     except:
-    #         print("failed to find username")
-    #     try:
-    #         username = conn.fetchall() #use what the database returns to look up stats
-    #         print(str(username[0][0]).rstrip())
-    #         await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
-    #     except:
-    #         print("failed to fetch username")
-    # else: #error
-    #     await ctx.send("Too many parameters")
 
 
 # In progress
@@ -116,9 +94,6 @@ async def pickem(ctx, *args):
         # Starts formatting
         result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10 |  Score  |\n" \
             "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-
-        pickemSQL = "select * from pickems where splitID = {} and serverID = {};".format(
-            splitID, ctx.message.guild.id)
 
         pickem_result = session.query(Pickems).filter(
             and_(Pickems.splitid == splitID, Pickems.serverid == ctx.message.guild.id)).all()
@@ -204,57 +179,26 @@ async def pickem(ctx, *args):
 
 
 # Displays a table into server of players fantasy score
-# TODO change to !pickem command with <region> parameter
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
     if args[0].lower() == "start":
+
         await ctx.send("Starting draft")
-        channel = ctx.channel
-        # MIDBot.loop.create_task(draft_timer(channel))
+
+        # Usually averages out to 40s
+        await count(30, ctx)
     elif args[0].lower() == "create":
         pass
     elif args[0].lower() == "join":
         pass
 
 
-# async def draft_timer(channel):
-#     numSeconds = 10
-#     print(channel)
-#     message = "Timer: {}".format(str(numSeconds))
-#     timer = await channel.send(message)
-#     await asyncio.sleep(1)
-#     while numSeconds > 0:
-#         numSeconds -= 1
-#         newMessage = "Timer: {}".format(str(numSeconds))
-#         await timer.edit(content=newMessage)
-#         await asyncio.sleep(1)
-
-# displays stats about players last game
-# TODO doesn't work
-# @MIDBot.command(pass_context=True)
-# async def lastgame(ctx, *args):
-#     if len(args) == 1: # username been given
-#         await ctx.send((LeagueStats.lastGame(args[0])))
-#     elif len(args) == 0: #no username been given, user default
-#         sql = "select summoner from discordinfo where discordName='" + str(
-#             ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
-#         print(sql)
-#         try:
-#             conn.execute(sql) # execute sql query
-#         except:
-#             print("failed to find username") #error
-#         try:
-#             username = conn.fetchall() #fetch
-#             print(str(username[0][0]).rstrip())
-#         except: #error
-#             print("failed to fetch username")
-#         try: #output
-#             await ctx.send(LeagueStats.lastGame(str(username[0][0]).rstrip()))
-#         except: #error
-#             print ("stats problem")
-#     else: #error
-#         await ctx.send("Too many parameters")
-
+async def count(num, ctx):
+    """Countdown; print messages to the channel while command isn't stopped/halted"""
+    for i in range(num, -1, -1):
+        await ctx.channel.send(str(i))
+        await sleep(1 - MIDBot.latency)
+        end_time = time.time()
 
 # lists all commands
 @MIDBot.command()
@@ -280,6 +224,67 @@ async def commands(ctx):
 async def lcs(ctx):
     await ctx.send("123")
 
+
+# Displays win-loss of the past 10 games
+# TODO doesn't work
+# @MIDBot.command(pass_context=True)
+# async def last10(ctx, *args):
+    # if len(args) == 1: # a username has been given, look up that name
+    #     await ctx.send(LeagueStats.last10Games(args[0]))
+    # elif len(args) == 0: #no username has been given
+    #     sql = "select summoner from discordinfo where discordName='" + str(
+    #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
+    #     print(sql) # log it
+    #     try:
+    #         conn.execute(sql) #execute sql query
+    #     except:
+    #         print("failed to find username")
+    #     try:
+    #         username = conn.fetchall() #use what the database returns to look up stats
+    #         print(str(username[0][0]).rstrip())
+    #         await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
+    #     except:
+    #         print("failed to fetch username")
+    # else: #error
+    #     await ctx.send("Too many parameters")
+
+# async def draft_timer(channel):
+    # numSeconds = 10
+    # print(channel)
+    # message = "Timer: {}".format(str(numSeconds))
+    # timer = await channel.send(message)
+    # await asyncio.sleep(1)
+    # while numSeconds > 0:
+    #     numSeconds -= 1
+    #     newMessage = "Timer: {}".format(str(numSeconds))
+    #     await timer.edit(content=newMessage)
+    #     await asyncio.sleep(1)
+
+# displays stats about players last game
+# TODO doesn't work
+# @MIDBot.command(pass_context=True)
+    # async def lastgame(ctx, *args):
+    # if len(args) == 1: # username been given
+    #     await ctx.send((LeagueStats.lastGame(args[0])))
+    # elif len(args) == 0: #no username been given, user default
+    #     sql = "select summoner from discordinfo where discordName='" + str(
+    #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
+    #     print(sql)
+    #     try:
+    #         conn.execute(sql) # execute sql query
+    #     except:
+    #         print("failed to find username") #error
+    #     try:
+    #         username = conn.fetchall() #fetch
+    #         print(str(username[0][0]).rstrip())
+    #     except: #error
+    #         print("failed to fetch username")
+    #     try: #output
+    #         await ctx.send(LeagueStats.lastGame(str(username[0][0]).rstrip()))
+    #     except: #error
+    #         print ("stats problem")
+    # else: #error
+    #     await ctx.send("Too many parameters")
 
 if __name__ == '__main__':
     discordTokens = utility.config(section='discord')
