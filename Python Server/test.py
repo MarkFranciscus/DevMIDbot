@@ -130,4 +130,4 @@ def videos():
 if __name__ == "__main__":
     # getLive()
     # getStandings(tournamentId=103462439438682788)
-    # getSlugs(tournamentId=103462439438682788)
+    getSlugs(tournamentId=103462439438682788)

@@ -124,14 +124,14 @@ async def pickem(ctx, *args):
                 result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
 
             i += 1
-        
+
         result += "Standings".ljust(23) + " |"  # pad username
         standings = lolesports.format_standing_list(
             lolesports.get_standings("lcs_2019_summer"))
         for team in standings:
             result += "{:^5}".format(team)
             result += "|"  # delimiter
-        result += "{:^9}".format('0') + "|"        
+        result += "{:^9}".format('0') + "|"
 
         result += "\n{:-^94}|\n".format("")
         result += "```"  # finish formatting
