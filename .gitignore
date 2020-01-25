@@ -60,3 +60,4 @@ target/
 # Config files
 *.ini
 config.txt
+Python Server/test.py

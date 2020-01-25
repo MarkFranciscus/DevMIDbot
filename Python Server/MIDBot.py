@@ -12,15 +12,12 @@ from sqlalchemy.sql import and_, text
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
 
-# import LeagueStats
-# import psycopg2
-
 Base, engine = None, None
 
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
 
-regions = ["NA", "KR", "EU", "CN"]
-
+regions = ['european masters', 'lla', 'worlds', 'all-star event', 'lcs', 'lec', 'lck', 'lpl', 'msi', 'opl', 'cblol', 'tcl', 'college championship', 'ljl', 'lcs academy']
+codesLCS = ['EG', 'TSM', 'C9', 'IMT', 'DIG', 'CLG', 'TL', 'FLY', 'GG', '100']
 
 @MIDBot.event
 async def on_ready():
@@ -38,9 +35,6 @@ async def on_read():
 @MIDBot.command(pass_context=True)
 async def test(ctx, *args):
     strtest = "```"
-    # for i in range(10):
-    # strtest += str('%d\n' % (i))
-    # print(strtest)
     strtest += str(ctx.message.guild.id)
     strtest += '```'
     await ctx.send(strtest)
@@ -139,7 +133,7 @@ async def pickem(ctx, *args):
 
     elif len(args) == 11:
         if args[0].upper() in regions:
-            regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND isconnrent = true;".format(
+            regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND iscurrrent = true;".format(
                 region)
             print(regionSQL)
             try:

@@ -127,6 +127,20 @@ def videos():
     pass
 
 
+def score(players_standings, real_standings):
+    score = 0
+    for i in range(1, 10, 1):
+        score += (i - real_standings[players_standings[i]])**2
+        # print(score)
+    return score
+
+
+def format_standing_list(standings):
+    temp = dict((v,k) for k,v in standings.items())
+    # print("temp", temp)
+    return [temp[i] for i in range(1, 11)]
+
+
 if __name__ == "__main__":
     # getLive()
     # getStandings(tournamentId=103462439438682788)
