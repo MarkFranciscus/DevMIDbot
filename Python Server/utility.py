@@ -71,7 +71,6 @@ def fantasy_scoring(player_stats):
     return stat
 
 def format_standings(standings):
-    # print(standings)
     scoreStandings = {}
     for key, value in standings.items():
         for string in value:
@@ -83,8 +82,7 @@ def format_standings(standings):
 def format_table(rows, standings, region):
     headers = ["Username", "1st", "2nd", "3rd", "4th", "5th", "6th",  "7th", "8th", "9th", "10th", "Score"]
         
-    last_row = [region]
-    # print(standings)
+    last_row = [region.upper()]
     for i in range(1, 11):
         if i in standings.keys():
             last_row.append("\n".join(standings[i]))
@@ -92,6 +90,4 @@ def format_table(rows, standings, region):
             last_row.append("")
     last_row += [0]
     pickems = rows + [last_row]
-    # print(pickems)
-    print(tabulate(pickems, headers, tablefmt="fancy_grid"))
     return tabulate(pickems, headers, tablefmt="fancy_grid")

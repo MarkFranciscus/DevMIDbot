@@ -104,9 +104,7 @@ async def pickem(ctx, *args):
             score = lolesports.score(player, score_standings)
             player_pickems.append([row.username, row.one, row.two, row.three, row.four,
                          row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
-        msg = "```" + utility.format_table(player_pickems, standings, region) + "```"
-        # result += "```"  # finish formatting
-        # msg = result  # output
+        msg = "```" + utility.format_table(player_pickems, standings, args[0]) + "```"
 
     elif len(args) == 11:
 
@@ -139,6 +137,7 @@ async def pickem(ctx, *args):
         for pick in picks:
             if pick not in team2code.keys():
                 msg = "Pick {} isn't a valid team".format(pick)
+                break
 
         row = [username, ctx.message.guild.id, splitID, team2code[args[1]], team2code[args[2]], team2code[args[3]], team2code[args[4]],
                team2code[args[5]], team2code[args[6]], team2code[args[7]], team2code[args[8]], team2code[args[9]], team2code[args[10]]]
