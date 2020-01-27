@@ -1,0 +1,7 @@
+discord.py==1.2.5
+SQLAlchemy==1.3.12
+requests==2.18.4
+tabulate==0.8.6
+cassiopeia==4.0.8
+discord==1.0.1
+fantasylcs==1.2.2
