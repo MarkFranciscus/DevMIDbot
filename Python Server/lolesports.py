@@ -12,11 +12,12 @@ def getLeagues(hl="en-US"):
 
     rawData = json.loads(r.text)
     leagues = rawData["data"]["leagues"]
-
+    region = {}
     for league in leagues:
         d[league["name"]] = league["id"]
-    
-    print(d)
+        region[league["name"].lower()] = league["region"]
+
+    print(region)
     
     return d
 
@@ -61,7 +62,9 @@ def getStandings(tournamentId, hl="en-US"):
                 standings[ordinal["ordinal"]] = [] 
                 for team in ordinal["teams"]:
                     standings[ordinal["ordinal"]].append(team["code"])
-    print(standings)
+    for i in range(1, 11):
+        if i not in standings.keys():
+            standings[i] = ['']
     return standings
 
 def getSlugs(tournamentId, hl="en-US"):
@@ -81,6 +84,24 @@ def getSlugs(tournamentId, hl="en-US"):
                     slugs += [team["slug"]]
     print(slugs)
     return slugs
+
+def getCodes(tournamentId, hl="en-US"):
+    codes = []
+
+    param = {"hl": hl, "tournamentId": tournamentId}
+    r = requests.get("https://esports-api.lolesports.com/persisted/gw/getStandings",
+        headers=header, params=param)
+    rawData = json.loads(r.text)
+
+    stages = rawData["data"]["standings"][0]["stages"]
+
+    for stage in stages:
+        if stage["name"] == "Regular Season":
+            for ordinal  in stage["sections"][0]["rankings"]:
+                for team in ordinal["teams"]:
+                    codes += [team["code"]]
+    print(codes)
+    return codes
 
 def getCompletedEvents():
     pass
@@ -143,5 +164,10 @@ def format_standing_list(standings):
 
 if __name__ == "__main__":
     # getLive()
-    # getStandings(tournamentId=103462439438682788)
-    # getSlugs(tournamentId=103462439438682788)
+    print(getStandings(tournamentId=103462439438682788))
+    # slugs = getSlugs(tournamentId=103462439438682788)
+    # getCodes(tournamentId=103462439438682788)
+    # getLeagues()
+    # for slug in slugs:
+    #     for player in getPlayers(slug):
+    #         print (slug + "," + player["role"] + "," + player["summonerName"])

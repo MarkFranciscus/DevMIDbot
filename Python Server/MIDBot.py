@@ -16,8 +16,10 @@ Base, engine = None, None
 
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
 
-regions = ['european masters', 'lla', 'worlds', 'all-star event', 'lcs', 'lec', 'lck', 'lpl', 'msi', 'opl', 'cblol', 'tcl', 'college championship', 'ljl', 'lcs academy']
+regions = {"european masters": "EUROPE", "lla": "LATIN AMERICA", "worlds": "INTERNATIONAL", "all-star event": "INTERNATIONAL", "lcs": "NORTH AMERICA", "lec": "EUROPE", "lck": "KOREA",
+           "lpl": "CHINA", "msi": "INTERNATIONAL", "opl": "OCEANIA", "cblol": "BRAZIL", "tcl": "TURKEY", "college championship": "NORTH AMERICA", "ljl": "JAPAN", "lcs academy": "NORTH AMERICA"}
 codesLCS = ['EG', 'TSM', 'C9', 'IMT', 'DIG', 'CLG', 'TL', 'FLY', 'GG', '100']
+
 
 @MIDBot.event
 async def on_ready():
@@ -68,108 +70,88 @@ async def setup(ctx, *args):
 async def pickem(ctx, *args):
     global Base, engine
     username = str(ctx.message.author)
-    region = args[0]
+    # region = args[0]
     region_result = None
     session = Session(engine)
 
     # Format pickem table
     if len(args) == 1:
+        if args[0] not in regions.keys():
+            msg = "Please give a valid region"
+        region = regions[args[0]]
         Splits = Base.classes.splits
         Pickems = Base.classes.pickems
 
         # SQL to get split id for given region
         region_result = session.query(Splits.splitid).filter(
-            and_(Splits.iscurrent, Splits.region.match(region))).all()
+            and_(Splits.iscurrent, Splits.region.like(region))).all()
 
         # print("splitID", region_result)
         for row in region_result:
+            print(row.splitid)
             splitID = row.splitid
 
-        # Starts formatting
-        result = "Fantasy Predictions \n\n ```Username                |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  10 |  Score  |\n" \
-            "------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-
+        standings = lolesports.getStandings(splitID)
+        score_standings = utility.format_standings(standings)
         pickem_result = session.query(Pickems).filter(
             and_(Pickems.splitid == splitID, Pickems.serverid == ctx.message.guild.id)).all()
-
+        player_pickems = []
         # format by going row by row
         for row in pickem_result:
             i = 0
-            standings = [row.one, row.two, row.three, row.four,
-                         row.five, row.six, row.seven, row.eight, row.nine, row.ten]
-            score = lolesports.score(standings, lolesports.get_standings(
-                "lcs_2019_summer"))  # TODO score function
-            standings = [row.username] + standings
-            # Format pickem row
-            for j in range(len(standings)):
-
-                column = str(standings[j])
-                if j == 0:
-                    result += column.ljust(23) + " |"  # pad username
-                else:
-                    result += "{:^5}".format(column)
-                    result += "|"  # delimiter
-
-            # End row with score
-            result += "{:^9}".format(str(score)) + "|"
-
-            # row seperator
-            if i < len(standings) - 1:
-                result += "\n------------------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+---------|\n"
-
-            i += 1
-
-        result += "Standings".ljust(23) + " |"  # pad username
-        standings = lolesports.format_standing_list(
-            lolesports.get_standings("lcs_2019_summer"))
-        for team in standings:
-            result += "{:^5}".format(team)
-            result += "|"  # delimiter
-        result += "{:^9}".format('0') + "|"
-
-        result += "\n{:-^94}|\n".format("")
-        result += "```"  # finish formatting
-        await ctx.send(result)  # output
+            player = [row.one, row.two, row.three, row.four,
+                              row.five, row.six, row.seven, row.eight, row.nine, row.ten]
+            score = lolesports.score(player, score_standings)
+            player_pickems.append([row.username, row.one, row.two, row.three, row.four,
+                         row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
+        msg = "```" + utility.format_table(player_pickems, standings, region) + "```"
+        # result += "```"  # finish formatting
+        # msg = result  # output
 
     elif len(args) == 11:
-        if args[0].upper() in regions:
-            regionSQL = "SELECT splitID FROM splits WHERE region LIKE '{}' AND iscurrrent = true;".format(
-                region)
-            print(regionSQL)
-            try:
-                conn.execute(regionSQL)
-            except(Exception, psycopg2.Error) as error:
-                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
-                print("failed execute", error)
 
-            try:
-                splitID = conn.fetchall()[0][0]
-            except:
-                print("failed to find region")
-                await ctx.send("Oopsies I messed up, I already let me know, but please create a git issue describing the issue! https://github.com/MarkFranciscus/DevMIDbot/issues")
+        if args[0].lower() not in regions:
+            msg = "Please choose a valid region"
 
-            pickemSQL = "INSERT INTO pickems VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}');".format(
-                username, ctx.message.guild.id, splitID, args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10])
-            print(pickemSQL)
-            try:
-                print(conn.execute(pickemSQL))
-                # try:
-                #     sql = "select * from ranking;"
-                #     conn.execute(sql)
-                #     rows = conn.fetchall()
-                #     for row in rows:
-                #         print("                                            ", row)
-                await ctx.send("Stored {}'s prediction".format(ctx.message.author.mention))
-                # except:
-                #     print("didnt select")
-            except(Exception, psycopg2.Error) as error:
-                print("failed execute", error)
-                await ctx.send("""Oopsies I messed up, I already let the dumb dev know, but please create a git issue describing the issue! 
-                            https://github.com/MarkFranciscus/DevMIDbot/issues""")
-        else:
-            await ctx.send("{} give a valid region".format(ctx.message.author.mention()))
+        region = regions[args[0].lower()]
+        Splits = Base.classes.splits
+        Pickems = Base.classes.pickems
+
+        region_result = session.query(Splits.splitid).filter(
+            and_(Splits.iscurrent, Splits.region.like(region))).all()
+
+        for row in region_result:
+            splitID = row.splitid
+
+        teams = lolesports.getCodes(splitID)
+        picks = args[1:]
+        team2code = {}
+        similarity = {}
+        for pick in picks:
+            similarity[pick] = []
+            for team in teams:
+                similarity[pick] += [team,
+                                     utility.similar(pick.lower(), team.lower())]
+                if utility.similar(pick.lower(), team.lower()) > 0.6:
+                    team2code[pick] = team
+                    break
+
+        for pick in picks:
+            if pick not in team2code.keys():
+                msg = "Pick {} isn't a valid team".format(pick)
+
+        row = [username, ctx.message.guild.id, splitID, team2code[args[1]], team2code[args[2]], team2code[args[3]], team2code[args[4]],
+               team2code[args[5]], team2code[args[6]], team2code[args[7]], team2code[args[8]], team2code[args[9]], team2code[args[10]]]
+        print("Inserting")
+        session.execute(Pickems.__table__.insert().values(row))
+        session.commit()
+        print("Inserted")
+        msg = "Stored your picks"
+
     else:
-        await ctx.send("Please list 10 teams")
+        msg = "Please list 10 teams"
+
+    await ctx.send(msg)
 
 
 # Displays a table into server of players fantasy score
