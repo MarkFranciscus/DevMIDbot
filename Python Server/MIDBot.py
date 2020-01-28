@@ -156,6 +156,8 @@ async def pickem(ctx, *args):
 # Displays a table into server of players fantasy score
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
+    if len(args) is 0:
+        ctx.send("Fuck you", ctx.message.author)
     if args[0].lower() == "start":
 
         await ctx.send("Starting draft")
