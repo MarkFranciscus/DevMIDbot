@@ -166,6 +166,8 @@ async def fantasy(ctx, *args):
         pass
     elif args[0].lower() == "join":
         pass
+    else:
+        ctx.send("Fuck you", ctx.message.author)
 
 
 async def count(num, ctx):
