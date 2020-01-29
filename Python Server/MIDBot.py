@@ -147,6 +147,8 @@ async def pickem(ctx, *args):
         print("Inserted")
         msg = "Stored your picks"
 
+    if len(args) == 2:
+
     else:
         msg = "Please list 10 teams"
 
@@ -178,6 +180,7 @@ async def count(num, ctx):
         await ctx.channel.send(str(i))
         await sleep(1 - MIDBot.latency)
         end_time = time.time()
+
 
 # lists all commands
 @MIDBot.command()
@@ -242,7 +245,7 @@ async def lcs(ctx):
 # displays stats about players last game
 # TODO doesn't work
 # @MIDBot.command(pass_context=True)
-    # async def lastgame(ctx, *args):
+# async def lastgame(ctx, *args):
     # if len(args) == 1: # username been given
     #     await ctx.send((LeagueStats.lastGame(args[0])))
     # elif len(args) == 0: #no username been given, user default
