@@ -12,6 +12,8 @@ from sqlalchemy.sql import and_, text
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
 
+import pandas as pd
+
 Base, engine = None, None
 
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
@@ -76,25 +78,24 @@ async def pickem(ctx, *args):
 
     # Format pickem table
     if len(args) == 1:
-        if args[0] not in regions.keys():
-            msg = "Please give a valid region"
-        region = regions[args[0]]
-        Splits = Base.classes.splits
+        region = args[0].lower()
+        Tournaments = Base.classes.tournaments
         Pickems = Base.classes.pickems
+        Leagues = Base.classes.leagues
 
         # SQL to get split id for given region
-        region_result = session.query(Splits.splitid).filter(
-            and_(Splits.iscurrent, Splits.region.like(region))).all()
+        region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
+            and_(Tournaments.iscurrent, Leagues.slug.like(region))).all()
 
         # print("splitID", region_result)
         for row in region_result:
-            print(row.splitid)
-            splitID = row.splitid
+            print(row.tournamentid)
+            tournamentID = row.tournamentid
 
-        standings = lolesports.getStandings(splitID)
+        standings = lolesports.getStandings(tournamentID)
         score_standings = utility.format_standings(standings)
         pickem_result = session.query(Pickems).filter(
-            and_(Pickems.splitid == splitID, Pickems.serverid == ctx.message.guild.id)).all()
+            and_(Pickems.tournamentid == tournamentID, Pickems.serverid == ctx.message.guild.id)).all()
         player_pickems = []
         # format by going row by row
         for row in pickem_result:
@@ -112,16 +113,16 @@ async def pickem(ctx, *args):
             msg = "Please choose a valid region"
 
         region = regions[args[0].lower()]
-        Splits = Base.classes.splits
+        Tournaments = Base.classes.splits
         Pickems = Base.classes.pickems
 
-        region_result = session.query(Splits.splitid).filter(
-            and_(Splits.iscurrent, Splits.region.like(region))).all()
+        region_result = session.query(Tournaments.splitid).filter(
+            and_(Tournaments.iscurrent, Tournaments.region.like(region))).all()
 
         for row in region_result:
-            splitID = row.splitid
+            tournamentID = row.splitid
 
-        teams = lolesports.getCodes(splitID)
+        teams = lolesports.getCodes(tournamentID)
         picks = args[1:]
         team2code = {}
         similarity = {}
@@ -139,7 +140,7 @@ async def pickem(ctx, *args):
                 msg = "Pick {} isn't a valid team".format(pick)
                 break
 
-        row = [username, ctx.message.guild.id, splitID, team2code[args[1]], team2code[args[2]], team2code[args[3]], team2code[args[4]],
+        row = [username, ctx.message.guild.id, tournamentID, team2code[args[1]], team2code[args[2]], team2code[args[3]], team2code[args[4]],
                team2code[args[5]], team2code[args[6]], team2code[args[7]], team2code[args[8]], team2code[args[9]], team2code[args[10]]]
         print("Inserting")
         session.execute(Pickems.__table__.insert().values(row))
@@ -147,7 +148,7 @@ async def pickem(ctx, *args):
         print("Inserted")
         msg = "Stored your picks"
 
-    if len(args) == 2:
+    # if len(args) == 2:
 
     else:
         msg = "Please list 10 teams"

@@ -8,30 +8,28 @@ header = {"x-api-key": "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"}
 
 
 def getLeagues(hl="en-US"):
-    d = {}
+    
     param = {"hl": hl}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getLeagues",
                      headers=header, params=param)
 
     rawData = json.loads(r.text)
     leagues = rawData["data"]["leagues"]
-    region = {}
-    for league in leagues:
-        d[league["name"]] = league["id"]
-        region[league["name"].lower()] = league["region"]
-
-    print(region)
-
-    return d
+    
+    leagues = pd.DataFrame().from_dict(json_normalize(
+        leagues), orient='columns')
+    
+    return leagues
 
 
-def getSchedule(leagueId, hl="en-US"):
+def getSchedule(leagueId, hl="en-US", pageToken=""):
     d = {}
-    param = {"hl": hl, "leagueId": leagueId}
+    param = {"hl": hl, "leagueId": leagueId, "pageToken": pageToken}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getSchedule",
                      headers=header, params=param)
     rawData = json.loads(r.text)
-    leagues = rawData["data"]
+    events = rawData["data"]["schedule"]["events"]
+    return events
 
 
 def getLive(hl="en-US"):
@@ -44,13 +42,18 @@ def getTournamentsForLeague(leagueId, hl="en-US"):
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getTournamentsForLeague",
                      headers=header, params=param)
     rawData = json.loads(r.text)
-    tournaments = rawData["data"]["leagues"][0]["tournaments"]
+    data = rawData["data"]["leagues"][0]["tournaments"]
 
-    for tournament in tournaments:
-        endDate = datetime.datetime.strptime(tournament["endDate"], "%Y-%m-%d")
-        if endDate > datetime.datetime.now():
-            print(tournament["id"])
-            return tournament["id"]
+    tournaments = pd.DataFrame().from_dict(json_normalize(data))
+    tournaments['startDate'] = pd.to_datetime(tournaments['startDate'])
+    tournaments['endDate'] = pd.to_datetime(tournaments['endDate'])
+    tournaments.columns = map(str.lower, tournaments.columns)
+    return tournaments
+    # for tournament in tournaments:
+    #     endDate = datetime.datetime.strptime(tournament["endDate"], "%Y-%m-%d")
+    #     if endDate > datetime.datetime.now():
+    #         print(tournament["id"])
+    #         return tournament["id"]
 
 
 def getStandings(tournamentId, hl="en-US"):
@@ -120,7 +123,7 @@ def getEventDetails():
     pass
 
 
-def getTeams(id, hl="en-US"):
+def get_teams(id = None, hl="en-US"):
 
     param = {"hl": hl, "id": id}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getTeams",
@@ -128,10 +131,10 @@ def getTeams(id, hl="en-US"):
     rawData = json.loads(r.text)
 
     team = pd.DataFrame.from_dict(json_normalize(
-        rawData["data"]["teams"][0]), orient='columns')
-
+        rawData["data"]["teams"]), orient='columns')
+    # print(rawData)
     del team['players']
-    print(team)
+    # print(team)
     return team
 
 
@@ -147,8 +150,8 @@ def getPlayers(id, hl="en-US"):
     team = rawData["data"]["teams"][0]['code']
     slug = rawData["data"]["teams"][0]['slug']
 
-    players = pd.DataFrame().from_dict(json_normalize(data), orient='columns')
-    players['Team'] = [team] * players.shape[0]
+    players = pd.DataFrame().from_dict(json_normalize(player_data), orient='columns')
+    players['code'] = [team] * players.shape[0]
     players['slug'] = [slug] * players.shape[0]
     return players
 
@@ -175,8 +178,6 @@ def getWindow(gameId, starting_time=""):
     return blueTeam, blueMetadata, redTeam, redMetadata
 
 
-
-
 def navItems():
     pass
 
@@ -198,13 +199,11 @@ def format_standing_list(standings):
     # print("temp", temp)
     return [temp[i] for i in range(1, 11)]
 
+
 def roundTime(dt=None, roundTo=10):
-   """Round a datetime object to any time lapse in seconds
-   dt : datetime.datetime object, default now.
-   roundTo : Closest number of seconds to round to, default 1 minute.
-   Author: Thierry Husson 2012 - Use it as you want but don't blame me.
-   """
-   if dt == None : dt = datetime.datetime.now()
+   """Round a datetime object to any time lapse in seconds"""
+   if dt == None: 
+       dt = datetime.datetime.now()
    seconds = (dt.replace(tzinfo=None) - dt.min).seconds
    rounding = (seconds+roundTo/2) // roundTo * roundTo
    return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
@@ -224,25 +223,8 @@ def getDetails(gameId, starting_time="", participantIds=""):
     return participants
 
 if __name__ == "__main__":
-    # getLive()
-    # print(getStandings(tournamentId=103462439438682788))
-    # slugs = getSlugs(tournamentId=103462439438682788)
-    # getCodes(tournamentId=103462439438682788)
-    # getLeagues()
-    # for slug in slugs:
-    #     for player in getPlayers(slug):
-    #         continue
-    # print (slug + "," + player["role"] + "," + player["summonerName"])
-    # for slug in slugs:
-    #     for team in getTeams(slug):
-    #         continue
-    
-    local_time = roundTime(datetime.datetime.now())
-    ts = local_time.isoformat("T") + "Z"
-    participants = getDetails("103462440145619680", starting_time=ts)
-    blueTeam, blueMetadata, redTeam, redMetadata = getWindow("103462440145619680", starting_time=ts)
-    gameMetadata = pd.concat([blueMetadata, redMetadata]) 
-    # print(participants)
-    print(gameMetadata)
-    participants = participants[['participantId', 'kills', 'deaths', 'assists', 'creepScore']].copy()
-    print(pd.merge(participants, gameMetadata, on="participantId"))
+    slugs = getSlugs(tournamentId=103462439438682788)
+    # blueTeam, blueMetadata, redTeam, redMetadata = getWindow("103462440145619680", starting_time=ts)
+    # gameMetadata = pd.concat([blueMetadata, redMetadata]) 
+    # participants = participants[['participantId', 'kills', 'deaths', 'assists', 'creepScore']].copy()
+    # print(pd.merge(participants, gameMetadata, on="participantId"))
