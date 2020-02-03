@@ -22,14 +22,19 @@ def getLeagues(hl="en-US"):
     return leagues
 
 
-def getSchedule(leagueId, hl="en-US", pageToken=""):
+def getSchedule(leagueId, include_pagetoken=False, hl="en-US", pageToken=""):
     d = {}
     param = {"hl": hl, "leagueId": leagueId, "pageToken": pageToken}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getSchedule",
                      headers=header, params=param)
     rawData = json.loads(r.text)
     events = rawData["data"]["schedule"]["events"]
-    return events
+    
+    if include_pagetoken:
+        pageTokens = rawData["data"]["schedule"]["pages"]
+        return events, pageTokens
+    else:
+        return events
 
 
 def getLive(hl="en-US"):
@@ -45,8 +50,8 @@ def getTournamentsForLeague(leagueId, hl="en-US"):
     data = rawData["data"]["leagues"][0]["tournaments"]
 
     tournaments = pd.DataFrame().from_dict(json_normalize(data))
-    tournaments['startDate'] = pd.to_datetime(tournaments['startDate'])
-    tournaments['endDate'] = pd.to_datetime(tournaments['endDate'])
+    tournaments['startDate'] = pd.to_datetime(tournaments['startDate'], utc=True)
+    tournaments['endDate'] = pd.to_datetime(tournaments['endDate'], utc=True)
     tournaments.columns = map(str.lower, tournaments.columns)
     return tournaments
     # for tournament in tournaments:

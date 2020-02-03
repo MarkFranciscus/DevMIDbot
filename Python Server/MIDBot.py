@@ -208,67 +208,6 @@ async def lcs(ctx):
     await ctx.send("123")
 
 
-# Displays win-loss of the past 10 games
-# TODO doesn't work
-# @MIDBot.command(pass_context=True)
-# async def last10(ctx, *args):
-    # if len(args) == 1: # a username has been given, look up that name
-    #     await ctx.send(LeagueStats.last10Games(args[0]))
-    # elif len(args) == 0: #no username has been given
-    #     sql = "select summoner from discordinfo where discordName='" + str(
-    #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" # construct sql query
-    #     print(sql) # log it
-    #     try:
-    #         conn.execute(sql) #execute sql query
-    #     except:
-    #         print("failed to find username")
-    #     try:
-    #         username = conn.fetchall() #use what the database returns to look up stats
-    #         print(str(username[0][0]).rstrip())
-    #         await ctx.send(LeagueStats.last10Games(str(username[0][0]).rstrip()))
-    #     except:
-    #         print("failed to fetch username")
-    # else: #error
-    #     await ctx.send("Too many parameters")
-
-# async def draft_timer(channel):
-    # numSeconds = 10
-    # print(channel)
-    # message = "Timer: {}".format(str(numSeconds))
-    # timer = await channel.send(message)
-    # await asyncio.sleep(1)
-    # while numSeconds > 0:
-    #     numSeconds -= 1
-    #     newMessage = "Timer: {}".format(str(numSeconds))
-    #     await timer.edit(content=newMessage)
-    #     await asyncio.sleep(1)
-
-# displays stats about players last game
-# TODO doesn't work
-# @MIDBot.command(pass_context=True)
-# async def lastgame(ctx, *args):
-    # if len(args) == 1: # username been given
-    #     await ctx.send((LeagueStats.lastGame(args[0])))
-    # elif len(args) == 0: #no username been given, user default
-    #     sql = "select summoner from discordinfo where discordName='" + str(
-    #         ctx.message.author) + "' and serverID=" + str(ctx.message.guild.id) + ";" #construct sql query
-    #     print(sql)
-    #     try:
-    #         conn.execute(sql) # execute sql query
-    #     except:
-    #         print("failed to find username") #error
-    #     try:
-    #         username = conn.fetchall() #fetch
-    #         print(str(username[0][0]).rstrip())
-    #     except: #error
-    #         print("failed to fetch username")
-    #     try: #output
-    #         await ctx.send(LeagueStats.lastGame(str(username[0][0]).rstrip()))
-    #     except: #error
-    #         print ("stats problem")
-    # else: #error
-    #     await ctx.send("Too many parameters")
-
 if __name__ == '__main__':
     discordTokens = utility.config(section='discord')
     MIDBot.run(discordTokens['bot_token'])

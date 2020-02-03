@@ -7,7 +7,6 @@ from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.engine.url import URL
 from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
-
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
 import sqlalchemy
@@ -17,6 +16,7 @@ import lolesports
 import datetime
 import numpy as np
 import pandas as pd
+import dateutil.parser
 
 # print(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 meta = MetaData()
@@ -97,35 +97,44 @@ def format_table(rows, standings, region):
     pickems = rows + [last_row]
     return tabulate(pickems, headers, tablefmt="fancy_grid")
 
-def schedule_data(leagueID):
-    events = lolesports.getSchedule(leagueId=leagueID)
-    schedule = pd.DataFrame()
 
-    for event in events:
-        d = {}
-        d['start_ts'] = event['startTime']
-        d['state'] = event['state']
-        d['blockName'] = event['blockName']
-        d['gameID'] = event['match']['id']
-        # temp = 
+    # return
 
 def init_data(engine):
     # players
-    players_dataframe = pd.DataFrame()
-    # slugs = lolesports.getSlugs(tournamentId=103462439438682788)
-    # for slug in slugs:
-    #    players_dataframe = pd.concat([players_dataframe, lolesports.getPlayers(slug)])
-    # players_dataframe.columns = map(str.lower, players_dataframe.columns)
-    # players_dataframe.rename(columns={'id':'playerid'}, inplace=True)
-    # players_dataframe.to_sql("players", engine, if_exists='append', index=False)
-    # print(players_dataframe)
+    # players = database_insert_players(engine)
+    
     # league
-    league = lolesports.getLeagues()
-    league.rename(columns={'id':'leagueid'}, inplace=True)
-    # league.to_sql("leagues", engine, index=False, if_exists='append')
-    # print(league)
+    leagues = database_insert_leagues(engine)
+    # print(leagues)
 
     # tournaments
+    # tournaments = database_insert_tournaments(leagues, engine)    
+
+    # current_tournaments = tournaments[tournaments['iscurrent'] == True]
+    # # teams
+    # teams = pd.DataFrame()
+    # for tournament in current_tournaments['tournamentid']:
+    #     print(tournament)
+    #     for slug in lolesports.getSlugs(tournament):
+    #         temp_players = lolesports.getPlayers(slug)
+    #         temp_players['tournamentid'] = tournament
+    #         players_dataframe = pd.concat([players_dataframe, temp_players], ignore_index=True)
+    #         # teams = pd.concat([teams, lolesports.get_teams(slug)], ignore_index=True)
+    
+    # players_dataframe.rename(columns={'id':'playerid'}, inplace=True)
+    # players_dataframe.columns = map(str.lower, players_dataframe.columns)
+    # players_dataframe.to_sql("players", engine, if_exists='append', index=False)
+
+            
+    # teams.rename(columns={'id':'teamid'}, inplace=True)
+    # print(teams)
+    # teams.to_sql("teams", engine, if_exists='append', index=False)
+
+    # Schedule
+    # tournament_schedule = schedule_data(engine)
+
+def database_insert_tournaments(league, engine):
     all_tournaments = pd.DataFrame()
     for leagueid in league['leagueid']:
         tournaments = lolesports.getTournamentsForLeague(leagueid)
@@ -135,32 +144,51 @@ def init_data(engine):
         p = (tournaments['startdate'] <= datetime.datetime.now()) & (datetime.datetime.now() <= tournaments['enddate'])
         tournaments['iscurrent'] = np.where(p, True, False) 
         all_tournaments = pd.concat([all_tournaments, tournaments], ignore_index=True)
+    all_tournaments.to_sql("tournaments", engine, if_exists='append', index=False)    
 
-    # all_tournaments.to_sql("tournaments", engine, if_exists='append', index=False,)
-    
-    current_tournaments = all_tournaments[all_tournaments['iscurrent'] == True]
-    # teams
-    teams = pd.DataFrame()
-    for tournament in current_tournaments['tournamentid']:
-        print(tournament)
-        for slug in lolesports.getSlugs(tournament):
-            temp_players = lolesports.getPlayers(slug)
-            temp_players['tournamentid'] = tournament
-            players_dataframe = pd.concat([players_dataframe, temp_players], ignore_index=True)
-            # teams = pd.concat([teams, lolesports.get_teams(slug)], ignore_index=True)
-    
-    players_dataframe.rename(columns={'id':'playerid'}, inplace=True)
+def database_insert_leagues(engine):
+    league = lolesports.getLeagues()
+    league.rename(columns={'id':'leagueid'}, inplace=True)
+    league.to_sql("leagues", engine, index=False, if_exists='append')
+    return league
+
+def database_insert_players(engine):
+    players_dataframe = pd.DataFrame()
+    slugs = lolesports.getSlugs(tournamentId=103462439438682788)
+    for slug in slugs:
+       players_dataframe = pd.concat([players_dataframe, lolesports.getPlayers(slug)])
     players_dataframe.columns = map(str.lower, players_dataframe.columns)
-    # print(players_dataframe[players_dataframe['playerid'] == '98926509759999764'])
+    players_dataframe.rename(columns={'id':'playerid'}, inplace=True)
     players_dataframe.to_sql("players", engine, if_exists='append', index=False)
-            
-    # teams.rename(columns={'id':'teamid'}, inplace=True)
-    # print(teams)
-    # teams.to_sql("teams", engine, if_exists='append', index=False)
+    return  players_dataframe
 
+def schedule_data(engine):
+    leagues = lolesports.getLeagues()
+    schedule = pd.DataFrame()
+    for leagueID in leagues['id']:
+        events = lolesports.getSchedule(leagueId=leagueID)
+        tournaments = lolesports.getTournamentsForLeague(leagueID)
+        
+        for event in events:
+            d = {}
+            d['gameID'] = [event['match']['id']]
+            startTime = dateutil.parser.isoparse(event['startTime'])
+            d['start_ts'] = [startTime]
+            d['team1']  = [event['match']['teams'][0]['code']]
+            d['team2']  = [event['match']['teams'][1]['code']]
+            d['state'] = [event['state']]
+            d['blockName'] = [event['blockName']]
+            # p = (tournaments['startdate'] <= startTime) and (startTime < tournaments['enddate'])
+            if len(tournaments.loc[(tournaments['startdate'] <= startTime) & (startTime < tournaments['enddate']), 'id'].index) == 0:
+                continue
+            d['tournamentid'] = [tournaments.loc[(tournaments['startdate'] <= startTime) & (startTime < tournaments['enddate']), 'id'].iloc[0]]#, 'tournamentid'].iloc[0]
+            # print(d)
+            temp = pd.DataFrame().from_dict(d)
+            schedule = pd.concat([schedule, temp], ignore_index=True)
+    schedule.to_sql("tournament_schedule", engine, if_exists='append', index=False)
+    return schedule
 
-
-# if __name__ == "__main__":
-#     base, engine = connect_database()
-#     # engine = None   
-#     init_data(engine)
+if __name__ == "__main__":
+    base, engine = connect_database()
+    # engine = None   
+    init_data(engine)
