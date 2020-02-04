@@ -159,3 +159,28 @@ CREATE TABLE player_gamedata (
 	role TEXT,
 	PRIMARY KEY (gameID, playerID)
 );
+
+CREATE TABLE team_gamedata (
+	gameID BIGINT,
+	teamID BIGINT REFERENCES teams,
+	frame_ts TIMESTAMP,
+	num_dragons INT,
+	num_barons INT,
+	num_towers INT,
+	PRIMARY KEY (gameID, teamID),
+	FOREIGN KEY()
+);
+
+CREATE TABLE player_gamedata (
+	gameID BIGINT,
+	playerID BIGINT REFERENCES player,
+	participantID INT,
+	frame_ts TIMESTAMP,
+	kills INT,
+	deaths INT,
+	assists INT,
+	creepScore INT,
+	championId TEXT,
+	role TEXT,
+	PRIMARY KEY (gameID, playerID)
+);

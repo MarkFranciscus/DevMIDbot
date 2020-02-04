@@ -89,7 +89,9 @@ def getSlugs(tournamentId, hl="en-US"):
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getStandings",
                      headers=header, params=param)
     rawData = json.loads(r.text)
-
+    # print(tournamentId)
+    if  "errors" in rawData.keys():
+        return []
     stages = rawData["data"]["standings"][0]["stages"]
 
     for stage in stages:
@@ -228,7 +230,7 @@ def getDetails(gameId, starting_time="", participantIds=""):
     return participants
 
 if __name__ == "__main__":
-    slugs = getSlugs(tournamentId=103462439438682788)
+    slugs = getSlugs(tournamentId=103540419468532110)
     # blueTeam, blueMetadata, redTeam, redMetadata = getWindow("103462440145619680", starting_time=ts)
     # gameMetadata = pd.concat([blueMetadata, redMetadata]) 
     # participants = participants[['participantId', 'kills', 'deaths', 'assists', 'creepScore']].copy()
