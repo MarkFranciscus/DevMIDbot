@@ -221,14 +221,18 @@ def roundTime(dt=None, roundTo=10):
 def getDetails(gameId, starting_time="", participantIds=""):
     params = {'startingTime': starting_time,
               'participantIds': participantIds}
-    # print(starting_time)
     r = requests.get("https://feed.lolesports.com/livestats/v1/details/{}".format(gameId), params=params)
     rawData = json.loads(r.text)
-    # print(rawData)
-    participant_data = rawData["frames"][0]["participants"]
-    # print(participant_data)
-    participants = pd.DataFrame().from_dict(json_normalize(participant_data), orient='columns')
-    # print(participants)
+    frames = rawData["frames"]
+    participants = pd.DataFrame()
+    for frame in frames:
+        participant_data = frame["participants"]
+        for participant in participant_data:
+            participant['timestamp'] = frame['rfc460Timestamp']
+        participants = pd.concat([participants, pd.DataFrame().from_dict(json_normalize(participant_data), orient='columns')])
+        # participants['timestamp'] = frame['rfc460Timestamp']
+        # print(participants)
+        # print(frame['rfc460Timestamp'])
     return participants
 
 if __name__ == "__main__":
@@ -236,16 +240,16 @@ if __name__ == "__main__":
     # date_time_str = '2020-02-01 19:00:00.0'
     date_time_str = '2020-01-26 01:07:10.0'
     gameid = "103462440145619680"
-    # columns=['participantId', 'kills', 'deaths', 'assists', 'creepScore']
+    columns=['participantId', 'kills', 'deaths', 'assists', 'creepScore', 'summonerName', 'timestamp']
     date_time_obj = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
     data = pd.DataFrame()
-    for i in range(360):
+    blueTeam, blueMetadata, redTeam, redMetadata, frames = getWindow(gameid, starting_time="")
+    gameMetadata = pd.concat([blueMetadata, redMetadata])
+    for i in range(10):
         x = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
-        blueTeam, blueMetadata, redTeam, redMetadata, frames = getWindow(gameid, starting_time=x)
-        gameMetadata = pd.concat([blueMetadata, redMetadata]) 
         participants = getDetails(gameId=gameid, starting_time=x)
         date_time_obj += datetime.timedelta(0,10)
         data = pd.concat([data, pd.merge(participants, gameMetadata, on="participantId")], ignore_index=True)
-    print(data)
-    data.to_csv()
-
+    data = data[columns]
+    data[['code', 'summonerName']] = data['summonerName'].str.split(' ', 1, expand=True)
+    data.to_csv('game.csv')
