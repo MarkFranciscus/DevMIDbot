@@ -63,10 +63,8 @@ def connect_database():
 
     return Base, engine
 
-
 def similar(a, b):
     return SequenceMatcher(None, a, b).ratio()
-
 
 def fantasy_scoring(player_stats):
     score = 0
@@ -95,33 +93,26 @@ def format_table(rows, standings, region):
             last_row.append("")
     last_row += [0]
     pickems = rows + [last_row]
+
     return tabulate(pickems, headers, tablefmt="fancy_grid")
 
-
-    # return
-
 def init_data(engine):
-    # players
-    # players = database_insert_players(engine)
     
     # league
     leagues = database_insert_leagues(engine)
-    # print(leagues)
-
+    
     # tournaments
-    tournaments = database_insert_tournaments(leagues, engine)    
+    tournaments = database_insert_tournaments(leagues, engine)
 
-    tmp = tournaments[tournaments['iscurrent'] == True]
-    current_tournaments =  tmp[tmp['slug'] != "tal_2020_split1"]
     # teams
+    current_tournaments = tournaments[tournaments['iscurrent'] == True]
     teams = database_insert_teams(current_tournaments)
 
-    database_insert_players(current_tournaments)
+    # tournamentschedule
+    tournament_schedule = database_insert_schedule(engine)
 
-    print(current_tournaments)
-
-    # Schedule
-    tournament_schedule = database_insert_schedule(engine, current_tournaments)
+    # players
+    players = database_insert_players(engine)
 
 def database_insert_players(current_tournaments):
     players_dataframe = pd.DataFrame()
@@ -132,7 +123,7 @@ def database_insert_players(current_tournaments):
             players_dataframe = pd.concat([players_dataframe, temp_players], ignore_index=True)
     players_dataframe.rename(columns={'id':'playerid'}, inplace=True)
     players_dataframe.columns = map(str.lower, players_dataframe.columns)
-    # players_dataframe.to_sql("players", engine, if_exists='append', index=False)
+    players_dataframe.to_sql("players", engine, if_exists='append', index=False)
 
 def database_insert_teams(current_tournaments):
     teams = pd.DataFrame(columns=['teamid', 'slug', 'name', 'code', 'image', 'alternativeImage',
@@ -162,7 +153,6 @@ def database_insert_tournaments(league, engine):
     # all_tournaments.to_sql("tournaments", engine, if_exists='append', index=False)    
     return all_tournaments
 
-    
 def database_insert_leagues(engine):
     league = lolesports.getLeagues()
     league.rename(columns={'id':'leagueid'}, inplace=True)
@@ -187,11 +177,8 @@ def database_insert_schedule(engine, tournaments):
         events = lolesports.getSchedule(leagueId=leagueID)
         tournaments = lolesports.getTournamentsForLeague(leagueID)
         
-        dt = datetime.datetime.utcnow()
-        dt = dt.replace(tzinfo=datetime.timezone.utc)
-        p = (tournaments['startdate'] <= dt) & (dt <= tournaments['enddate'])
+        tournaments = tournaments[tournaments['iscurrent'] == True]
         
-        tournaments = tournaments[p]
         for event in events:
             if event['type'] != "match":
                 continue
@@ -220,9 +207,7 @@ def database_insert_schedule(engine, tournaments):
     schedule.to_sql("tournament_schedule", engine, if_exists='append', index=False)
     return schedule
 
-
-
-if __name__ == "__main__":
-    base, engine = connect_database()
-    # engine = None   
-    init_data(engine)
+# if __name__ == "__main__":
+#     base, engine = connect_database()
+#     # engine = None   
+#     init_data(engine)

@@ -172,7 +172,7 @@ def getWindow(gameId, starting_time=""):
     r = requests.get(
         "https://feed.lolesports.com/livestats/v1/window/{}".format(gameId), params=params)
     rawData = json.loads(r.text)
-
+    # print(rawData)
     blueTeam = rawData['gameMetadata']['blueTeamMetadata']['esportsTeamId']
     blueMetadata_dict = rawData['gameMetadata']['blueTeamMetadata']['participantMetadata']
     
@@ -180,9 +180,11 @@ def getWindow(gameId, starting_time=""):
     redMetadata_dict = rawData['gameMetadata']['redTeamMetadata']['participantMetadata']
 
     blueMetadata = pd.DataFrame().from_dict(json_normalize(blueMetadata_dict), orient='columns')
-    redMetadata =pd.DataFrame().from_dict(json_normalize(redMetadata_dict), orient='columns')
+    redMetadata = pd.DataFrame().from_dict(json_normalize(redMetadata_dict), orient='columns')
 
-    return blueTeam, blueMetadata, redTeam, redMetadata
+    frames = rawData['frames']
+
+    return blueTeam, blueMetadata, redTeam, redMetadata, frames
 
 
 def navItems():
@@ -194,9 +196,9 @@ def videos():
 
 
 def score(players_standings, real_standings):
-    score = 0
+    score = []
     for i in range(1, 10, 1):
-        score += (i - real_standings[players_standings[i]])**2
+        score += [(i - real_standings[players_standings[i]])**2]
         # print(score)
     return score
 
@@ -230,8 +232,20 @@ def getDetails(gameId, starting_time="", participantIds=""):
     return participants
 
 if __name__ == "__main__":
-    slugs = getSlugs(tournamentId=103540419468532110)
-    # blueTeam, blueMetadata, redTeam, redMetadata = getWindow("103462440145619680", starting_time=ts)
-    # gameMetadata = pd.concat([blueMetadata, redMetadata]) 
-    # participants = participants[['participantId', 'kills', 'deaths', 'assists', 'creepScore']].copy()
-    # print(pd.merge(participants, gameMetadata, on="participantId"))
+    # slugs = getSlugs(tournamentId=103540419468532110)
+    # date_time_str = '2020-02-01 19:00:00.0'
+    date_time_str = '2020-01-26 01:07:10.0'
+    gameid = "103462440145619680"
+    # columns=['participantId', 'kills', 'deaths', 'assists', 'creepScore']
+    date_time_obj = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
+    data = pd.DataFrame()
+    for i in range(360):
+        x = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+        blueTeam, blueMetadata, redTeam, redMetadata, frames = getWindow(gameid, starting_time=x)
+        gameMetadata = pd.concat([blueMetadata, redMetadata]) 
+        participants = getDetails(gameId=gameid, starting_time=x)
+        date_time_obj += datetime.timedelta(0,10)
+        data = pd.concat([data, pd.merge(participants, gameMetadata, on="participantId")], ignore_index=True)
+    print(data)
+    data.to_csv()
+

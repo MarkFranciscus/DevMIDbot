@@ -87,7 +87,6 @@ async def pickem(ctx, *args):
         region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
             and_(Tournaments.iscurrent, Leagues.slug.like(region))).all()
 
-        # print("splitID", region_result)
         for row in region_result:
             print(row.tournamentid)
             tournamentID = row.tournamentid
@@ -102,10 +101,13 @@ async def pickem(ctx, *args):
             i = 0
             player = [row.one, row.two, row.three, row.four,
                               row.five, row.six, row.seven, row.eight, row.nine, row.ten]
-            score = lolesports.score(player, score_standings)
+            score = sum(lolesports.score(player, score_standings))
             player_pickems.append([row.username, row.one, row.two, row.three, row.four,
                          row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
         msg = "```" + utility.format_table(player_pickems, standings, args[0]) + "```"
+
+    elif len(args) == 2:
+        
 
     elif len(args) == 11:
 
