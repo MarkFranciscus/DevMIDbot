@@ -296,6 +296,34 @@ def database_update_teams(engine):
 
     newTeams.to_sql("teams", engine, if_exists='append',  index=False)
 
+
+def fantasy_league_table():
+    get_fantasy_player_score = """
+        select
+            pg.summoner_name,
+            sum(pg.fantasy_score),
+            blockName
+        from
+            player_gamedata as pg,
+            (
+            select
+                gameid,
+                max(frame_ts)
+            from
+                player_gamedata
+            group by
+                gameid) as most_recent_ts,
+            tournament_schedule as ts
+        where
+            pg.gameid = most_recent_ts.gameid
+            and pg.frame_ts = most_recent_ts.max
+            and pg.gameid = ts.gameid
+        group by
+            summoner_name,
+            blockName
+    """
+
+
 def database_insert_gamedata(engine):
     session = Session(engine)
     Tournament_Schedule = Base.classes.tournament_schedule
@@ -315,7 +343,7 @@ def database_insert_gamedata(engine):
 
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
-    
+
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state == "completed", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted)).all()
     for row in gameid_result:
@@ -473,7 +501,7 @@ def database_insert_gamedata(engine):
                 team_data = pd.concat([team_data, teams], ignore_index=True)
             # print(player_data)
             if state == 'paused':
-                    continue
+                continue
             player_data[['code', 'summoner_name']] = player_data['summonerName'].str.split(
                 ' ', 1, expand=True)
             player_data = player_data[player_columns]
@@ -485,6 +513,6 @@ def database_insert_gamedata(engine):
             print(
                 f"state: {state}, Time: {timestamp}, Loop Time: {time.time() - start_time}")
 
+
 if __name__ == "__main__":
     Base, engine = connect_database()
-    
