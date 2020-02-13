@@ -1,11 +1,12 @@
-import requests
-import json
 import datetime
-import pandas as pd
-from pandas import json_normalize
-import utility
+import json
 import time
 
+import pandas as pd
+import requests
+from pandas import json_normalize
+
+import utility
 
 header = {"x-api-key": "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"}
 

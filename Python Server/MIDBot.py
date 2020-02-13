@@ -1,27 +1,20 @@
 import asyncio
-from asyncio import sleep
 import time
-
-from discord.ext.commands import Bot
-
-import utility
-import lolesports
-
-import sqlalchemy
-from sqlalchemy.sql import and_, text
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.automap import automap_base
+from asyncio import sleep
 
 import pandas as pd
+import sqlalchemy
+from discord.ext.commands import Bot
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import and_, text
+
+import lolesports
+import utility
 
 Base, engine = None, None
 
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
-
-regions = {"european masters": "EUROPE", "lla": "LATIN AMERICA", "worlds": "INTERNATIONAL", "all-star event": "INTERNATIONAL", "lcs": "NORTH AMERICA", "lec": "EUROPE", "lck": "KOREA",
-           "lpl": "CHINA", "msi": "INTERNATIONAL", "opl": "OCEANIA", "cblol": "BRAZIL", "tcl": "TURKEY", "college championship": "NORTH AMERICA", "ljl": "JAPAN", "lcs academy": "NORTH AMERICA"}
-codesLCS = ['EG', 'TSM', 'C9', 'IMT', 'DIG', 'CLG', 'TL', 'FLY', 'GG', '100']
-
 
 @MIDBot.event
 async def on_ready():
