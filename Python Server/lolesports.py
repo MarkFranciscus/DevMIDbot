@@ -2,7 +2,10 @@ import requests
 import json
 import datetime
 import pandas as pd
-from pandas.io.json import json_normalize
+from pandas import json_normalize
+import utility
+import time
+
 
 header = {"x-api-key": "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"}
 
@@ -54,11 +57,6 @@ def getTournamentsForLeague(leagueId, hl="en-US"):
     tournaments['endDate'] = pd.to_datetime(tournaments['endDate'], utc=True)
     tournaments.columns = map(str.lower, tournaments.columns)
     return tournaments
-    # for tournament in tournaments:
-    #     endDate = datetime.datetime.strptime(tournament["endDate"], "%Y-%m-%d")
-    #     if endDate > datetime.datetime.now():
-    #         print(tournament["id"])
-    #         return tournament["id"]
 
 
 def getStandings(tournamentId, hl="en-US"):
@@ -67,7 +65,7 @@ def getStandings(tournamentId, hl="en-US"):
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getStandings",
                      headers=header, params=param)
     rawData = json.loads(r.text)
-
+    print(f"{r.elapsed.total_seconds()}")
     stages = rawData["data"]["standings"][0]["stages"]
 
     for stage in stages:
@@ -89,7 +87,7 @@ def getSlugs(tournamentId, hl="en-US"):
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getStandings",
                      headers=header, params=param)
     rawData = json.loads(r.text)
-    # print(tournamentId)
+    # print(f"{r.elapsed.total_seconds()}")
     if  "errors" in rawData.keys():
         return []
     stages = rawData["data"]["standings"][0]["stages"]
@@ -126,8 +124,13 @@ def getCompletedEvents():
     pass
 
 
-def getEventDetails():
-    pass
+def getEventDetails(matchId, hl="en-US"):
+    param = {"hl": hl, "id": matchId}
+    r = requests.get("https://esports-api.lolesports.com/persisted/gw/getEventDetails",
+                     headers=header, params=param)
+    rawData = json.loads(r.text)
+    # print(rawData["data"].keys())
+    return rawData["data"]["event"]
 
 
 def get_teams(id = None, hl="en-US"):
@@ -171,21 +174,25 @@ def getWindow(gameId, starting_time=""):
     params = {'startingTime': starting_time}
     r = requests.get(
         "https://feed.lolesports.com/livestats/v1/window/{}".format(gameId), params=params)
-    rawData = json.loads(r.text)
-    # print(rawData)
-    blueTeam = rawData['gameMetadata']['blueTeamMetadata']['esportsTeamId']
-    blueMetadata_dict = rawData['gameMetadata']['blueTeamMetadata']['participantMetadata']
-    
-    redTeam = rawData['gameMetadata']['redTeamMetadata']['esportsTeamId']
-    redMetadata_dict = rawData['gameMetadata']['redTeamMetadata']['participantMetadata']
+    # r.encoding = 'utf-8'
+    if r.status_code == 200: 
+        rawData = json.loads(r.text)
+        
+        blueTeam = rawData['gameMetadata']['blueTeamMetadata']['esportsTeamId']
+        blueMetadata_dict = rawData['gameMetadata']['blueTeamMetadata']['participantMetadata']
+        
+        redTeam = rawData['gameMetadata']['redTeamMetadata']['esportsTeamId']
+        redMetadata_dict = rawData['gameMetadata']['redTeamMetadata']['participantMetadata']
 
-    blueMetadata = pd.DataFrame().from_dict(json_normalize(blueMetadata_dict), orient='columns')
-    redMetadata = pd.DataFrame().from_dict(json_normalize(redMetadata_dict), orient='columns')
+        blueMetadata = pd.DataFrame().from_dict(json_normalize(blueMetadata_dict), orient='columns')
+        redMetadata = pd.DataFrame().from_dict(json_normalize(redMetadata_dict), orient='columns')
 
-    frames = rawData['frames']
+        frames = rawData['frames']
 
-    return blueTeam, blueMetadata, redTeam, redMetadata, frames
-
+        matchid = rawData['esportsMatchId']
+        return blueTeam, blueMetadata, redTeam, redMetadata, frames, matchid
+    else:
+        raise Exception(f"getWindow giving status code {r.status_code}")
 
 def navItems():
     pass
@@ -209,15 +216,6 @@ def format_standing_list(standings):
     return [temp[i] for i in range(1, 11)]
 
 
-def roundTime(dt=None, roundTo=10):
-   """Round a datetime object to any time lapse in seconds"""
-   if dt == None: 
-       dt = datetime.datetime.now()
-   seconds = (dt.replace(tzinfo=None) - dt.min).seconds
-   rounding = (seconds+roundTo/2) // roundTo * roundTo
-   return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
-
-
 def getDetails(gameId, starting_time="", participantIds=""):
     params = {'startingTime': starting_time,
               'participantIds': participantIds}
@@ -235,21 +233,9 @@ def getDetails(gameId, starting_time="", participantIds=""):
         # print(frame['rfc460Timestamp'])
     return participants
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # slugs = getSlugs(tournamentId=103540419468532110)
     # date_time_str = '2020-02-01 19:00:00.0'
-    date_time_str = '2020-01-26 01:07:10.0'
-    gameid = "103462440145619680"
-    columns=['participantId', 'kills', 'deaths', 'assists', 'creepScore', 'summonerName', 'timestamp']
-    date_time_obj = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
-    data = pd.DataFrame()
-    blueTeam, blueMetadata, redTeam, redMetadata, frames = getWindow(gameid, starting_time="")
-    gameMetadata = pd.concat([blueMetadata, redMetadata])
-    for i in range(10):
-        x = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
-        participants = getDetails(gameId=gameid, starting_time=x)
-        date_time_obj += datetime.timedelta(0,10)
-        data = pd.concat([data, pd.merge(participants, gameMetadata, on="participantId")], ignore_index=True)
-    data = data[columns]
-    data[['code', 'summonerName']] = data['summonerName'].str.split(' ', 1, expand=True)
-    data.to_csv('game.csv')
+    
+    
+    # data.to_csv('game2.csv')

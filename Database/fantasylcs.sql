@@ -1,4 +1,3 @@
-
 -- Drop table
 
 -- DROP TABLE public.discordinfo;
@@ -7,7 +6,7 @@ CREATE TABLE public.discordinfo (
 	discordname text NOT NULL,
 	summoner text NOT NULL,
 	serverid int8 NOT NULL,
-	CONSTRAINT discordinfo_pkey PRIMARY KEY (discordname, serverid)
+	CONSTRAINT discordinfo_pkey PRIMARY KEY (discordname,serverid)
 );
 
 -- Drop table
@@ -39,9 +38,10 @@ CREATE TABLE public.teams (
 	"homeLeague.name" text NULL,
 	"homeLeague.region" text NULL,
 	"homeLeague" float8 NULL,
+	tournamentid int8 NOT NULL,
 	CONSTRAINT teams_code_key UNIQUE (code),
-	CONSTRAINT teams_name_key UNIQUE (name),
-	CONSTRAINT teams_pkey PRIMARY KEY (teamid),
+	CONSTRAINT teams_name_key UNIQUE ("name"),
+	CONSTRAINT teams_pk PRIMARY KEY (teamid,tournamentid),
 	CONSTRAINT teams_slug_key UNIQUE (slug)
 );
 
@@ -63,8 +63,28 @@ CREATE TABLE public.fantasyteam (
 	sub1 text NULL,
 	sub2 text NULL,
 	sub3 text NULL,
-	CONSTRAINT fantasyteam_pkey PRIMARY KEY (username, serverid, leagueid),
-	CONSTRAINT fantasyteam_username_fkey FOREIGN KEY (username, serverid) REFERENCES discordinfo(discordname, serverid)
+	blockname varchar NOT NULL,
+	CONSTRAINT fantasyteam_pk PRIMARY KEY (username,serverid,leagueid,blockname),
+	CONSTRAINT fantasyteam_username_fkey FOREIGN KEY (username,serverid) REFERENCES public.discordinfo(discordname,serverid)
+);
+
+-- Drop table
+
+-- DROP TABLE public.tournament_schedule;
+
+CREATE TABLE public.tournament_schedule (
+	tournamentid int8 NOT NULL,
+	gameid int8 NOT NULL,
+	start_ts timestamp NULL,
+	team1code text NULL,
+	team2code text NULL,
+	winnerid text NULL,
+	blockname text NULL,
+	state text NULL,
+	CONSTRAINT tournament_schedule_pk PRIMARY KEY (gameid),
+	CONSTRAINT tournament_schedule_team1code_fkey FOREIGN KEY (team1code) REFERENCES public.teams(code),
+	CONSTRAINT tournament_schedule_team2code_fkey FOREIGN KEY (team2code) REFERENCES public.teams(code),
+	CONSTRAINT tournament_schedule_winnerid_fkey FOREIGN KEY (winnerid) REFERENCES public.teams(code)
 );
 
 -- Drop table
@@ -79,7 +99,7 @@ CREATE TABLE public.tournaments (
 	enddate timestamp NULL,
 	iscurrent bool NULL,
 	CONSTRAINT tournaments_pkey PRIMARY KEY (tournamentid),
-	CONSTRAINT tournaments_leagueid_fkey FOREIGN KEY (leagueid) REFERENCES leagues(leagueid)
+	CONSTRAINT tournaments_leagueid_fkey FOREIGN KEY (leagueid) REFERENCES public.leagues(leagueid)
 );
 
 -- Drop table
@@ -100,19 +120,38 @@ CREATE TABLE public.pickems (
 	eight text NOT NULL,
 	nine text NOT NULL,
 	ten text NOT NULL,
-	CONSTRAINT pickems_pkey PRIMARY KEY (username, serverid, tournamentid),
-	CONSTRAINT pickems_eight_fkey FOREIGN KEY (eight) REFERENCES teams(code),
-	CONSTRAINT pickems_five_fkey FOREIGN KEY (five) REFERENCES teams(code),
-	CONSTRAINT pickems_four_fkey FOREIGN KEY (four) REFERENCES teams(code),
-	CONSTRAINT pickems_nine_fkey FOREIGN KEY (nine) REFERENCES teams(code),
-	CONSTRAINT pickems_one_fkey FOREIGN KEY (one) REFERENCES teams(code),
-	CONSTRAINT pickems_seven_fkey FOREIGN KEY (seven) REFERENCES teams(code),
-	CONSTRAINT pickems_six_fkey FOREIGN KEY (six) REFERENCES teams(code),
-	CONSTRAINT pickems_ten_fkey FOREIGN KEY (ten) REFERENCES teams(code),
-	CONSTRAINT pickems_three_fkey FOREIGN KEY (three) REFERENCES teams(code),
-	CONSTRAINT pickems_tournamentid_fkey FOREIGN KEY (tournamentid) REFERENCES tournaments(tournamentid),
-	CONSTRAINT pickems_two_fkey FOREIGN KEY (two) REFERENCES teams(code),
-	CONSTRAINT pickems_username_fkey FOREIGN KEY (username, serverid) REFERENCES discordinfo(discordname, serverid)
+	CONSTRAINT pickems_pkey PRIMARY KEY (username,serverid,tournamentid),
+	CONSTRAINT pickems_eight_fkey FOREIGN KEY (eight) REFERENCES public.teams(code),
+	CONSTRAINT pickems_five_fkey FOREIGN KEY (five) REFERENCES public.teams(code),
+	CONSTRAINT pickems_four_fkey FOREIGN KEY (four) REFERENCES public.teams(code),
+	CONSTRAINT pickems_nine_fkey FOREIGN KEY (nine) REFERENCES public.teams(code),
+	CONSTRAINT pickems_one_fkey FOREIGN KEY (one) REFERENCES public.teams(code),
+	CONSTRAINT pickems_seven_fkey FOREIGN KEY (seven) REFERENCES public.teams(code),
+	CONSTRAINT pickems_six_fkey FOREIGN KEY (six) REFERENCES public.teams(code),
+	CONSTRAINT pickems_ten_fkey FOREIGN KEY (ten) REFERENCES public.teams(code),
+	CONSTRAINT pickems_three_fkey FOREIGN KEY (three) REFERENCES public.teams(code),
+	CONSTRAINT pickems_tournamentid_fkey FOREIGN KEY (tournamentid) REFERENCES public.tournaments(tournamentid),
+	CONSTRAINT pickems_two_fkey FOREIGN KEY (two) REFERENCES public.teams(code),
+	CONSTRAINT pickems_username_fkey FOREIGN KEY (username,serverid) REFERENCES public.discordinfo(discordname,serverid)
+);
+
+-- Drop table
+
+-- DROP TABLE public.player_gamedata;
+
+CREATE TABLE public.player_gamedata (
+	gameid int8 NOT NULL,
+	summoner_name text NOT NULL,
+	participantid int4 NULL,
+	frame_ts timestamp NOT NULL,
+	kills int4 NULL,
+	deaths int4 NULL,
+	assists int4 NULL,
+	creep_score int4 NULL,
+	fantasy_score numeric NULL,
+	"role" text NULL,
+	CONSTRAINT player_gamedata_pkey PRIMARY KEY (gameid,summoner_name,frame_ts),
+	CONSTRAINT player_gamedata_gameid_fkey FOREIGN KEY (gameid) REFERENCES public.tournament_schedule(gameid)
 );
 
 -- Drop table
@@ -129,58 +168,27 @@ CREATE TABLE public.players (
 	code text NULL,
 	slug text NULL,
 	tournamentid int8 NOT NULL,
-	CONSTRAINT players_pkey PRIMARY KEY (playerid, tournamentid),
-	CONSTRAINT players_code_fkey FOREIGN KEY (code) REFERENCES teams(code),
-	CONSTRAINT players_slug_fkey FOREIGN KEY (slug) REFERENCES teams(slug),
-	CONSTRAINT players_tournamentid_fkey FOREIGN KEY (tournamentid) REFERENCES tournaments(tournamentid)
+	CONSTRAINT players_pkey PRIMARY KEY (playerid,tournamentid),
+	CONSTRAINT players_code_fkey FOREIGN KEY (code) REFERENCES public.teams(code),
+	CONSTRAINT players_slug_fkey FOREIGN KEY (slug) REFERENCES public.teams(slug),
+	CONSTRAINT players_tournamentid_fkey FOREIGN KEY (tournamentid) REFERENCES public.tournaments(tournamentid)
 );
 
-CREATE TABLE team_gamedata (
-	gameID BIGINT,
-	teamID BIGINT REFERENCES teams,
-	frame_ts TIMESTAMP,
-	num_dragons INT,
-	num_barons INT,
-	num_towers INT,
-	PRIMARY KEY (gameID, teamID),
-	FOREIGN KEY()
-);
+-- Drop table
 
-CREATE TABLE player_gamedata (
-	gameID BIGINT,
-	playerID BIGINT REFERENCES player,
-	participantID INT,
-	frame_ts TIMESTAMP,
-	kills INT,
-	deaths INT,
-	assists INT,
-	creepScore INT,
-	championId TEXT,
-	role TEXT,
-	PRIMARY KEY (gameID, playerID)
-);
+-- DROP TABLE public.team_gamedata;
 
-CREATE TABLE team_gamedata (
-	gameID BIGINT,
-	teamID BIGINT REFERENCES teams,
-	frame_ts TIMESTAMP,
-	num_dragons INT,
-	num_barons INT,
-	num_towers INT,
-	PRIMARY KEY (gameID, teamID),
-	FOREIGN KEY()
-);
-
-CREATE TABLE player_gamedata (
-	gameID BIGINT,
-	playerID BIGINT REFERENCES player,
-	participantID INT,
-	frame_ts TIMESTAMP,
-	kills INT,
-	deaths INT,
-	assists INT,
-	creepScore INT,
-	championId TEXT,
-	role TEXT,
-	PRIMARY KEY (gameID, playerID)
+CREATE TABLE public.team_gamedata (
+	gameid int8 NOT NULL,
+	teamid int8 NOT NULL,
+	frame_ts timestamp NOT NULL,
+	dragons int4 NULL,
+	barons int4 NULL,
+	towers int4 NULL,
+	first_blood bool NULL,
+	under_30 bool NULL,
+	win bool NULL,
+	fantasy_score numeric NULL,
+	CONSTRAINT team_gamedata_pkey PRIMARY KEY (gameid,teamid,frame_ts),
+	CONSTRAINT team_gamedata_gameid_fkey FOREIGN KEY (gameid) REFERENCES public.tournament_schedule(gameid)
 );
