@@ -192,3 +192,15 @@ CREATE TABLE public.team_gamedata (
 	CONSTRAINT team_gamedata_pkey PRIMARY KEY (gameid,teamid,frame_ts),
 	CONSTRAINT team_gamedata_gameid_fkey FOREIGN KEY (gameid) REFERENCES public.tournament_schedule(gameid)
 );
+
+CREATE TABLE public.fantasy_matchups (
+	player_1 TEXT NOT NULL REFERENCES discordinfo(discordname),
+	player_2 TEXT NOT NULL REFERENCES discordinfo(discordname),
+	serverid INT8 NOT NULL REFERENCES discordinfo(serverid)
+	blockName TEXT NOT NULL,
+	PRIMARY KEY (player_1, player_2, serverid, blockName)
+)
+
+INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('rhythmkiller#3594', 'Flailure#3447', 158269352980774912, 'Week 3');
+INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('Jesus', 'aReNGee#5138', 158269352980774912, 'Week 3');
+INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('Brady', 'Manning', 158269352980774912, 'Week 3');

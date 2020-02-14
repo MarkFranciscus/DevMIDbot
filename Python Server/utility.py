@@ -10,7 +10,7 @@ import dateutil.parser
 import numpy as np
 import pandas as pd
 import sqlalchemy
-from pandas import json_normalize
+from pandas.io.json import json_normalize
 from sqlalchemy import MetaData, Table, create_engine, inspect
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.automap import automap_base
@@ -24,6 +24,7 @@ import lolesports
 # meta = MetaData()
 conn = None
 Base = None
+blockName = 'Week 3'
 
 
 def config(filename='config.ini', section='database'):
@@ -33,7 +34,7 @@ def config(filename='config.ini', section='database'):
 
     # read config file
     filepath = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '.')) + '/'
+        os.path.dirname(__file__), '..')) + '/'
     parser.read(filepath + filename)
     db = {}
 
@@ -295,33 +296,6 @@ def database_update_teams(engine):
     newTeams.to_sql("teams", engine, if_exists='append',  index=False)
 
 
-def fantasy_league_table():
-    get_fantasy_player_score = """
-        select
-            pg.summoner_name,
-            sum(pg.fantasy_score),
-            blockName
-        from
-            player_gamedata as pg,
-            (
-            select
-                gameid,
-                max(frame_ts)
-            from
-                player_gamedata
-            group by
-                gameid) as most_recent_ts,
-            tournament_schedule as ts
-        where
-            pg.gameid = most_recent_ts.gameid
-            and pg.frame_ts = most_recent_ts.max
-            and pg.gameid = ts.gameid
-        group by
-            summoner_name,
-            blockName
-    """
-
-
 def database_insert_gamedata(engine):
     session = Session(engine)
     Tournament_Schedule = Base.classes.tournament_schedule
@@ -512,5 +486,98 @@ def database_insert_gamedata(engine):
                 f"state: {state}, Time: {timestamp}, Loop Time: {time.time() - start_time}")
 
 
-if __name__ == "__main__":
-    Base, engine = connect_database()
+def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid=103462439438682788):
+    FantasyTeam = Base.classes.fantasyteam
+    selectFantasyPlayerScore = f"""
+    select
+        summoner_name,
+        "role" ,
+        sum(fantasy_score) as fantasy_score
+    from
+        player_gamedata as pg
+    inner join (
+        select
+            gameid
+        from
+            tournament_schedule
+        where
+            blockname = '{blockName}'
+            and tournamentid =  {tournamentid}) as games on
+        pg.gameid = games.gameid
+    inner join (
+        select
+            gameid,
+            max(frame_ts)
+        from
+            player_gamedata
+        group by
+            gameid) as most_recent_ts on
+        most_recent_ts.gameid = games.gameid
+        and pg.frame_ts = most_recent_ts.max
+    group by
+        summoner_name,
+        "role"
+    """
+    selectFantasyTeamScore = f"""select
+        code as "summoner_name",
+        'team' as "role",
+        sum(fantasy_score) as fantasy_score
+    from
+        team_gamedata as tg
+    inner join (
+        select
+            gameid
+        from
+            tournament_schedule
+        where
+            blockname = '{blockName}'
+            and tournamentid = {tournamentid} ) as games on
+        tg.gameid = games.gameid
+    inner join (
+        select
+            gameid,
+            max(frame_ts)
+        from
+            team_gamedata
+        group by
+            gameid) as most_recent_ts on
+        most_recent_ts.gameid = games.gameid
+        and tg.frame_ts = most_recent_ts.max inner join
+        teams t on t.teamid = tg.teamid 
+    group by
+        code,
+        "role"
+        """
+
+    roles = ['Top', 'Jungle', 'Mid', 'Bottom', 'Support', 'Flex', 'Team']
+    session = Session(engine)
+    selectFantasyTeams = session.query(FantasyTeam.username, FantasyTeam.top, FantasyTeam.jungle, FantasyTeam.mid, FantasyTeam.bot, FantasyTeam.support, FantasyTeam.flex, FantasyTeam.team).filter(FantasyTeam.serverid == serverid)
+    
+
+    playerFantasyScores = pd.read_sql(selectFantasyPlayerScore, engine)
+    teamFantasyScores = pd.read_sql(selectFantasyTeamScore, engine)
+    columns=['role', 'summoner_name', 'fantasy_score']
+    playerFantasyScores = playerFantasyScores[columns]
+    fantasyScores = pd.concat([playerFantasyScores, teamFantasyScores], ignore_index=True)
+    scoreTables = {}
+    for row in selectFantasyTeams:
+        df = pd.DataFrame({"summoner_name": list(row[1:])})
+        scoreTables[row[0]] = pd.merge(df, fantasyScores, how='left', on="summoner_name")
+        for i in range(7):
+            scoreTables[row[0]].loc[i, 'role'] = roles[i]
+        scoreTables[row[0]] = scoreTables[row[0]][columns]
+        scoreTables[row[0]].fillna(0, inplace=True)
+
+        sumRow = {'role':'Total', 'summoner_name':row[0], 'fantasy_score':sum(scoreTables[row[0]]['fantasy_score'])}
+        sumFrame = pd.DataFrame(sumRow, index=[0])
+        scoreTables[row[0]] = pd.concat([scoreTables[row[0]], sumFrame], ignore_index=True)
+        # print(list(scoreTables[row[0]].columns.values)[::-1])
+    return scoreTables
+
+
+    # for x in fantasyScores:
+        # print(f"{x[0]},x[1])
+
+# if __name__ == "__main__":
+#     Base, engine = connect_database()
+#     get_fantasy_league_table(engine, Base)

@@ -8,6 +8,7 @@ from discord.ext.commands import Bot
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_, text
+from tabulate import tabulate
 
 import lolesports
 import utility
@@ -99,15 +100,17 @@ async def pickem(ctx, *args):
                          row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
         msg = "```" + utility.format_table(player_pickems, standings, args[0]) + "```"
 
-    elif len(args) == 2:
+    # elif len(args) == 2:
         
 
     elif len(args) == 11:
 
-        if args[0].lower() not in regions:
-            msg = "Please choose a valid region"
+        # if args[0].lower() not in regions:
+        #     msg = "Please choose a valid region"
 
-        region = regions[args[0].lower()]
+        region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
+            and_(Tournaments.iscurrent, Leagues.slug.like(region))).all()
+
         Tournaments = Base.classes.splits
         Pickems = Base.classes.pickems
 
@@ -154,8 +157,9 @@ async def pickem(ctx, *args):
 # Displays a table into server of players fantasy score
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
-    if len(args) is 0:
-        ctx.send("Fuck you", ctx.message.author)
+    global Base, engine
+    # if len(args) is 0:
+    #     ctx.send("Fuck you", ctx.message.author)
     if args[0].lower() == "start":
 
         await ctx.send("Starting draft")
@@ -165,9 +169,38 @@ async def fantasy(ctx, *args):
     elif args[0].lower() == "create":
         pass
     elif args[0].lower() == "join":
-        pass
-    else:
-        ctx.send("Fuck you", ctx.message.author)
+        pass    
+    elif args[0].lower() == "lcs":
+        result = "'''Matchups\n"
+        Fantasy_Matchups = Base.classes.fantasy_matchups
+        session = Session(engine)
+        
+        scoreFrame = utility.get_fantasy_league_table(engine, Base)
+        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == 'Week 3')
+
+        for matchup in matchups:
+            player1 = matchup[0]
+            player2 = matchup[1]
+            player1Frame = scoreFrame[player1]
+            player2Frame = scoreFrame[player2]
+            player1Columns = list(scoreFrame[player2].columns.values)
+            player2Columns = list(scoreFrame[player2].columns.values)[::-1]
+            player1Map = {x:x + " 1" for x in player1Columns}
+            player2Map = {x:x + " 2" for x in player2Columns}
+            player1Frame = player1Frame[player1Columns]
+            player2Frame = player2Frame[player2Columns]
+            player1Frame.rename(player1Map, inplace=True)
+            player2Frame.rename(player2Map, inplace=True)
+            print(player1Frame)
+            print(player2Frame)
+            matchupFrame = pd.merge(player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'],)
+            msg = f"```{tabulate(matchupFrame, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
+            # msg = f"```{tabulate(player1Frame, headers=player1Columns, tablefmt='fancy_grid')}\t{tabulate(player2Frame, headers=player2Columns, tablefmt='fancy_grid')}```"
+        # result += "'''"
+            await ctx.send(msg)
+    
+    # else:
+    #     ctx.send("Fuck you", ctx.message.author)
 
 
 async def count(num, ctx):
