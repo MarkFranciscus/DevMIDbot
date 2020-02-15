@@ -178,12 +178,12 @@ async def fantasy(ctx, *args):
         scoreFrame = utility.get_fantasy_league_table(engine, Base)
         
         serverid = ctx.message.guild.id
-
+        # print(serverid)
         FantasyTeam = Base.classes.fantasyteam
         tournamentidResult = session.query(FantasyTeam.tournamentid).filter(FantasyTeam.serverid == serverid).first()
         tournamentid = tournamentidResult[0]
 
-        blockName = utility.get_block_name(engine, Base, serverid, tournamentid)
+        blockName = utility.get_block_name(engine, Base, tournamentid)
         matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == blockName)
 
         for matchup in matchups:
