@@ -24,7 +24,6 @@ import lolesports
 # meta = MetaData()
 conn = None
 Base = None
-blockName = 'Week 3'
 
 
 def config(filename='config.ini', section='database'):
@@ -488,6 +487,7 @@ def database_insert_gamedata(engine):
 
 def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid=103462439438682788):
     FantasyTeam = Base.classes.fantasyteam
+    blockName = get_block_name(engine, Base, tournamentid)
     selectFantasyPlayerScore = f"""
     select
         summoner_name,
@@ -574,10 +574,13 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
         # print(list(scoreTables[row[0]].columns.values)[::-1])
     return scoreTables
 
-
-    # for x in fantasyScores:
-        # print(f"{x[0]},x[1])
+def get_block_name(engine, Base, tournamentid):
+    Tournament_Schedule = Base.classes.tournament_schedule
+    session = Session(engine)
+    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.state != 'completed', Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
+    return blockResult[0]
 
 # if __name__ == "__main__":
-#     Base, engine = connect_database()
+    # Base, engine = connect_database()
 #     get_fantasy_league_table(engine, Base)
+    # get_block_name(engine, Base, 103462439438682788)

@@ -176,7 +176,15 @@ async def fantasy(ctx, *args):
         session = Session(engine)
         
         scoreFrame = utility.get_fantasy_league_table(engine, Base)
-        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == 'Week 3')
+        
+        serverid = ctx.message.guild.id
+
+        FantasyTeam = Base.classes.fantasyteam
+        tournamentidResult = session.query(FantasyTeam.tournamentid).filter(FantasyTeam.serverid == serverid).first()
+        tournamentid = tournamentidResult[0]
+
+        blockName = utility.get_block_name(engine, Base, serverid, tournamentid)
+        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == blockName)
 
         for matchup in matchups:
             player1 = matchup[0]
