@@ -82,7 +82,7 @@ async def pickem(ctx, *args):
         region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
             and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()
 
-        tournamentID = region_result.tournamentid[0]
+        tournamentID = region_result[0]
 
         standings = lolesports.getStandings(tournamentID)
         score_standings = utility.format_standings(standings)
