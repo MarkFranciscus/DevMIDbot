@@ -66,6 +66,7 @@ async def setup(ctx, *args):
 async def pickem(ctx, *args):
     global Base, engine
     username = str(ctx.message.author)
+    serverid = ctx.message.guild.id
     # region = args[0]
     region_result = None
     session = Session(engine)
@@ -79,16 +80,14 @@ async def pickem(ctx, *args):
 
         # SQL to get split id for given region
         region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
-            and_(Tournaments.iscurrent, Leagues.slug.like(region))).all()
+            and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()
 
-        for row in region_result:
-            print(row.tournamentid)
-            tournamentID = row.tournamentid
+        tournamentID = region_result.tournamentid[0]
 
         standings = lolesports.getStandings(tournamentID)
         score_standings = utility.format_standings(standings)
         pickem_result = session.query(Pickems).filter(
-            and_(Pickems.tournamentid == tournamentID, Pickems.serverid == ctx.message.guild.id)).all()
+            and_(Pickems.tournamentid == tournamentID, Pickems.serverid == serverid)).all()
         player_pickems = []
         # format by going row by row
         for row in pickem_result:
@@ -100,9 +99,43 @@ async def pickem(ctx, *args):
                          row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
         msg = "```" + utility.format_table(player_pickems, standings, args[0]) + "```"
 
-    # elif len(args) == 2:
-        
+    elif len(args) == 2:
+        if args[1].lower() == "breakdown":
+            region = args[0].lower()
+            Tournaments = Base.classes.tournaments
+            Pickems = Base.classes.pickems
+            Leagues = Base.classes.leagues
 
+            # SQL to get split id for given region
+            tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
+                and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
+            
+            standings = lolesports.getStandings(tournamentID)
+            score_standings = utility.format_standings(standings)
+            pickem_result = session.query(Pickems).filter(
+                Pickems.tournamentid == tournamentID, Pickems.serverid == serverid, Pickems.username == username).first()
+
+            player = [pickem_result.one, pickem_result.two, pickem_result.three, pickem_result.four,
+                    pickem_result.five, pickem_result.six, pickem_result.seven, pickem_result.eight, pickem_result.nine, pickem_result.ten]
+            scores = lolesports.score(player, score_standings)
+            scores += [sum(scores)]
+        
+            
+            standingsTable = []
+            for i in range(1, 11):
+                if i in standings.keys():
+                    standingsTable.append("\n".join(standings[i]))
+                else:
+                    standingsTable.append("")
+            standingsTable += [0]
+            # print(standingsTable)
+            labels = ["1st", "2nd", "3rd", "4th",
+                    "5th", "6th",  "7th", "8th", "9th", "10th", "Score"]
+            # print (f"{len(labels)} - {len(standingsTable)} - {len(scores)}")
+            player += ['']
+            breakdownDict = {'': labels, 'Standings': standingsTable, 'Pickem': player, 'Scores': scores}
+            breakdownFrame = pd.DataFrame(breakdownDict)
+            msg = f"```{tabulate(breakdownFrame, 'keys', tablefmt='fancy_grid', showindex=False)}```"
     elif len(args) == 11:
 
         # if args[0].lower() not in regions:
@@ -203,8 +236,7 @@ async def fantasy(ctx, *args):
             print(player2Frame)
             matchupFrame = pd.merge(player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'],)
             msg = f"```{tabulate(matchupFrame, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
-            # msg = f"```{tabulate(player1Frame, headers=player1Columns, tablefmt='fancy_grid')}\t{tabulate(player2Frame, headers=player2Columns, tablefmt='fancy_grid')}```"
-        # result += "'''"
+            
             await ctx.send(msg)
     
     # else:

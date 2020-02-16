@@ -42,7 +42,12 @@ def getSchedule(leagueId, include_pagetoken=False, hl="en-US", pageToken=""):
 
 
 def getLive(hl="en-US"):
-    pass
+    param = {"hl": hl}
+    r = requests.get("https://esports-api.lolesports.com/persisted/gw/getLive",
+                     headers=header, params=param)
+    rawData = json.loads(r.text)
+    events = rawData["data"]["schedule"]["events"]
+    return events
 
 
 def getTournamentsForLeague(leagueId, hl="en-US"):
@@ -205,9 +210,9 @@ def videos():
 
 def score(players_standings, real_standings):
     score = []
-    for i in range(1, 10, 1):
+    for i in range(0, 10, 1):
         score += [(i - real_standings[players_standings[i]])**2]
-        # print(score)
+        # print(f"{players_standings[i]} - {score}")
     return score
 
 
