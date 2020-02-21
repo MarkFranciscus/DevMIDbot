@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import itertools
 import os
@@ -5,12 +6,14 @@ import random
 import time
 from configparser import ConfigParser
 from difflib import SequenceMatcher
+from time import sleep
 
 import dateutil.parser
 import numpy as np
 import pandas as pd
 import sqlalchemy
-from pandas.io.json import json_normalize
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pandas import json_normalize
 from sqlalchemy import MetaData, Table, create_engine, inspect
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.automap import automap_base
@@ -19,10 +22,7 @@ from sqlalchemy.sql import and_, text
 from tabulate import tabulate
 
 import lolesports
-from time import sleep
 
-# print(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
-# meta = MetaData()
 conn = None
 Base = None
 
@@ -305,16 +305,16 @@ def database_insert_gamedata(engine, Base):
 
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
-
+    today = datetime.datetime.now()
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
-                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "unstarted", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted)).all()
+                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+    # print(str(gameid_result))
     for row in gameid_result:
-        parse_gamedate(row.leagueid, row.tournamentid,
-                       row.gameid, row.start_ts)
+        # print(row.gameid)
+        parse_gamedate(engine, Base, row.leagueid, row.tournamentid, row.gameid, row.start_ts)
 
 
-def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
-    # print(live_data)
+def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_data=False):
     if live_data == False:
         start_ts += datetime.timedelta(hours=5)
     date_time_obj = roundTime(start_ts)
@@ -323,7 +323,7 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
     blueFirstBlood = False
     redFirstBlood = False
     state = "unstarted"
-
+    session = Session(engine)
     player_columns = ['gameid', 'participantId', 'frame_ts', 'kills', 'deaths',
                       'assists', 'creepScore', 'fantasy_score', 'summoner_name', 'role']
     map_columns = {'gameid': 'gameid', 'participantId': 'participantid',
@@ -333,38 +333,39 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
 
     team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
                     'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
-
+    print(f"Starting game {gameid}")
     while state != "finished":
+
         start_time = time.time()
         player_data = pd.DataFrame()
         team_data = pd.DataFrame()
 
         timestamp = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
         date_time_obj += datetime.timedelta(seconds=10)
+
         # Catches errors
-        # print("before")
         try:
             blueTeamID, blueMetadata, redTeamID, redMetadata, frames, matchid = lolesports.getWindow(
                 gameid, starting_time=timestamp)
         except Exception as error:
-            print(f"{error} - {timestamp} - {gameid}")
+            # print(f"{error} - {timestamp} - {gameid}")
             if live_data:
                 loopTime = time.time() - start_time
-                # print("Sleeping")
-                # sleep(10 - loopTime)
+                print("Game hasn't started yet")
+                sleep(10 - loopTime)
             continue
-        # print("after")
+
         # If there's only two frames then they will be redundant frames ¯\_(ツ)_/¯
         if (len(frames) < 2):
             if live_data:
                 loopTime = time.time() - start_time
-                print("Sleeping")
+                print("Skipping over redudant frames")
                 sleep(10 - loopTime)
             continue
 
         # Team's codes
-        blueCode = blueMetadata["summonerName"].iloc[0].split(' ', 1)[1]
-        redCode = redMetadata["summonerName"].iloc[0].split(' ', 1)[1]
+        blueCode = blueMetadata["summonerName"].iloc[0].split(' ', 1)[0]
+        redCode = redMetadata["summonerName"].iloc[0].split(' ', 1)[0]
 
         gameMetadata = pd.concat(
             [blueMetadata, redMetadata], ignore_index=True)
@@ -373,15 +374,10 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
         for frame in frames:
 
             state = frame['gameState']  # Checks if game is over
-
+            # print(state)
             if state == 'paused':
                 continue
 
-            # Checks if frame is redundant
-            if frame['rfc460Timestamp'] in timestamps:
-                continue
-            else:
-                timestamps.append(frame['rfc460Timestamp'])
             participants = pd.DataFrame()
             teams = pd.DataFrame()
 
@@ -407,14 +403,7 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
                 player['gameid'] = gameid
                 player['frame_ts'] = frame['rfc460Timestamp']
 
-            participants = pd.concat([participants, pd.DataFrame().from_dict(
-                json_normalize(bluePlayers)), pd.DataFrame().from_dict(
-                json_normalize(redPlayers))], ignore_index=True)
-
-            temp_participants = pd.merge(
-                participants, gameMetadata, on="participantId")
-            player_data = pd.concat(
-                [player_data, temp_participants], ignore_index=True)
+            
 
             blueTeam['dragons'] = len(blueTeam['dragons'])
             blueTeam['gameid'] = gameid
@@ -439,8 +428,10 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
 
             # Checks which team won
             if state == "finished":
+                # print("test")
                 events = lolesports.getSchedule(leagueid)
                 # matchid = gameid - 1
+                # print(f'finished - {matchid}')
                 for event in events:
                     match = event["match"]
                     # print(f"{match['id']} - {matchid} - {int(match['id']) == matchid}")
@@ -458,19 +449,42 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
                         break
                     else:
                         continue
-
+                session = Session(engine)
+                Tournament_Schedule = Base.classes.tournament_schedule
+                game = session.query(Tournament_Schedule).filter(Tournament_Schedule.gameid == gameid).first()
+                game.state = 'finished'
+                
                 if blueWin:
                     blueTeam['win'] = True
                     endTS = datetime.datetime.strptime(
                         frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     blueTeam['under_30'] = endTS - \
                         startTS < datetime.timedelta(minutes=30)
+                    game.winner_code = blueCode
                 else:
                     redTeam['win'] = True
                     endTS = datetime.datetime.strptime(
                         frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     redTeam['under_30'] = endTS - \
                         startTS < datetime.timedelta(minutes=30)
+                    game.winner_code = redCode
+                print(f"game id: {gameid} - block:{game.blockname} - winner: {game.winner_code}")
+                session.commit()
+            
+            # Checks if frame is redundant
+            if frame['rfc460Timestamp'] in timestamps:
+                continue
+            else:
+                timestamps.append(frame['rfc460Timestamp'])
+            
+            participants = pd.concat([participants, pd.DataFrame().from_dict(
+                json_normalize(bluePlayers)), pd.DataFrame().from_dict(
+                json_normalize(redPlayers))], ignore_index=True)
+
+            temp_participants = pd.merge(
+                participants, gameMetadata, on="participantId")
+            player_data = pd.concat(
+                [player_data, temp_participants], ignore_index=True)
 
             blueTeam['fantasy_score'] = fantasy_team_scoring(blueTeam)
             redTeam['fantasy_score'] = fantasy_team_scoring(redTeam)
@@ -481,11 +495,10 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
             teams = teams[team_columns]
 
             team_data = pd.concat([team_data, teams], ignore_index=True)
-        # print(player_data)
         if state == 'paused':
             if live_data:
                 loopTime = time.time() - start_time
-                print("Sleeping")
+                print("Game is paused")
                 sleep(10 - loopTime)
             continue
         player_data[['code', 'summoner_name']] = player_data['summonerName'].str.split(
@@ -496,12 +509,14 @@ def parse_gamedate(leagueid, tournamentid, gameid, start_ts, live_data=False):
                            if_exists='append', index=False)
         team_data.to_sql("team_gamedata", engine,
                          if_exists='append', index=False)
-        print(
-            f"state: {state}, Time: {timestamp}, Loop Time: {time.time() - start_time}")
+        # print(
+        #     f"state: {state}, Time: {timestamp}, Loop Time: {time.time() - start_time}")
         if live_data:
             loopTime = time.time() - start_time
-            print("Sleeping")
+            print("Data parsed")
             sleep(10 - loopTime)
+
+    
 
 
 def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid=103462439438682788):
@@ -589,7 +604,7 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
         scoreTables[row[0]] = scoreTables[row[0]][columns]
         scoreTables[row[0]].fillna(0, inplace=True)
 
-        sumRow = {'role': 'Total', 'summoner_name': row[0], 'fantasy_score': sum(
+        sumRow = {'role': 'Total', 'summoner_name': "     ", 'fantasy_score': sum(
             scoreTables[row[0]]['fantasy_score'])}
         sumFrame = pd.DataFrame(sumRow, index=[0])
         scoreTables[row[0]] = pd.concat(
@@ -606,12 +621,13 @@ def get_block_name(engine, Base, tournamentid):
     return blockResult[0]
 
 
-def live_data(engine, Base):
+def live_data():
+    Base, engine = connect_database()
+    print(f"Live data at {datetime.datetime.now()}")
     events = lolesports.getLive()
     for event in events:
         if event['type'] == "match" and int(event['league']['id']) == 98767991299243165:
             leagueid = event['league']['id']
-            print(leagueid)
             matchid = event['id']
             session = Session(engine)
             Tournaments = Base.classes.tournaments
@@ -622,13 +638,31 @@ def live_data(engine, Base):
             start_ts = event["startTime"]
             start_ts_datetime = datetime.datetime.strptime(
                 start_ts, '%Y-%m-%dT%H:%M:%SZ')
-            parse_gamedate(leagueid, tournamentid, gameid,
+            parse_gamedate(engine, leagueid, tournamentid, gameid,
                            start_ts_datetime, live_data=True)
 
 
-# if __name__ == "__main__":
-#     Base, engine = connect_database()
+if __name__ == "__main__":
+    Base, engine = connect_database()
 # #     get_fantasy_league_table(engine, Base)
 #     # get_block_name(engine, Base, 103462439438682788)
-    # database_insert_gamedata(engine, Base)
-#     # live_data(engine, Base)
+    # parse_gamedate(engine, Base, 98767991299243165, 103462439438682788, 103462440145619642, datetime.datetime.strptime('2020-01-27T20:30:00Z', '%Y-%m-%dT%H:%M:%SZ'))
+
+    database_insert_gamedata(engine, Base)
+    # live_data()
+    
+    # m = multiprocessing.Manager()
+    # variable = m.Value('i', 60)
+
+    # scheduler = AsyncIOScheduler()
+    # # Tournament
+    # scheduler.add_job(live_data, 'interval', hours=1, start_date='2020-02-17 19:30:00')
+    # scheduler.start()
+
+    
+    # scheduler.print_jobs()
+
+    # try:
+    #     asyncio.get_event_loop().run_forever()
+    # except (KeyboardInterrupt, SystemExit):
+    #     pass

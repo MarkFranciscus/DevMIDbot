@@ -4,7 +4,7 @@ import time
 
 import pandas as pd
 import requests
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 
 import utility
 
@@ -198,8 +198,9 @@ def getWindow(gameId, starting_time=""):
         matchid = rawData['esportsMatchId']
         return blueTeam, blueMetadata, redTeam, redMetadata, frames, matchid
     else:
-        raise Exception(f"getWindow giving status code {r.status_code}")
-
+        # raise Exception(f"getWindow giving status code {r.status_code}")
+        pass
+    
 def navItems():
     pass
 

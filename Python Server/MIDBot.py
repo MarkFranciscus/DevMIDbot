@@ -1,6 +1,7 @@
 import asyncio
 import time
 from asyncio import sleep
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import pandas as pd
 import sqlalchemy
@@ -9,7 +10,7 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_, text
 from tabulate import tabulate
-
+from datetime import datetime
 import lolesports
 import utility
 
@@ -21,7 +22,16 @@ MIDBot = Bot(command_prefix="!", case_insensitive=True)
 async def on_ready():
     global Base, engine
     Base, engine = utility.connect_database()
-    print("Connected")
+    session = Session(engine)
+    scheduler = AsyncIOScheduler()
+
+    Tournament_Schedule = Base.classes.tournament_schedule
+    today = datetime.now()
+    game_ts_result = session.query(Tournament_Schedule.start_ts).filter(Tournament_Schedule.start_ts > today).all()
+    for start_ts in game_ts_result:
+        scheduler.add_job(utility.live_data, 'cron', start_date=start_ts[0])
+    scheduler.start()
+    scheduler.print_jobs()
 
 
 @MIDBot.event
@@ -47,19 +57,16 @@ async def ranking(*args):
 # Insert user into database
 @MIDBot.command(pass_context=True)
 async def setup(ctx, *args):
+    session = Session(engine)
+    discordinfo = Base.classes.discordinfo
+
     member = ctx.message.author
-    print(member)  # log messages
-    print(ctx.message)
-    print(args)
-    setupSQL = "INSERT INTO DiscordInfo VALUES ('" + str(member) + "', '" + args[0] + "', " + str(
-        ctx.message.guild.id) + ");"
-    print(setupSQL)
-    try:  # insert user into database
-        print(conn.execute(setupSQL))
-        await ctx.send("Tied @" + str(member) + " to " + args[0])  # success
-        # print(conn.fetchall)
-    except:  # error
-        print("didn't insert")
+    summoner = args[0]
+    serverid = ctx.message.guild.id
+    
+    discordinfo.discordname, discordinfo.summoner, discordinfo.serverid = member, summoner, serverid
+    session.commit()
+    await ctx.send("Tied @" + str(member) + " to " + args[0])  # success
 
 
 @MIDBot.command(pass_context=True)
@@ -191,12 +198,8 @@ async def pickem(ctx, *args):
 @MIDBot.command(pass_context=True)
 async def fantasy(ctx, *args):
     global Base, engine
-    # if len(args) is 0:
-    #     ctx.send("Fuck you", ctx.message.author)
     if args[0].lower() == "start":
-
         await ctx.send("Starting draft")
-
         # Usually averages out to 40s
         await count(30, ctx)
     elif args[0].lower() == "create":
@@ -204,14 +207,12 @@ async def fantasy(ctx, *args):
     elif args[0].lower() == "join":
         pass    
     elif args[0].lower() == "lcs":
-        result = "'''Matchups\n"
         Fantasy_Matchups = Base.classes.fantasy_matchups
         session = Session(engine)
         
         scoreFrame = utility.get_fantasy_league_table(engine, Base)
         
         serverid = ctx.message.guild.id
-        # print(serverid)
         FantasyTeam = Base.classes.fantasyteam
         tournamentidResult = session.query(FantasyTeam.tournamentid).filter(FantasyTeam.serverid == serverid).first()
         tournamentid = tournamentidResult[0]
@@ -222,25 +223,24 @@ async def fantasy(ctx, *args):
         for matchup in matchups:
             player1 = matchup[0]
             player2 = matchup[1]
+            
             player1Frame = scoreFrame[player1]
             player2Frame = scoreFrame[player2]
+            
             player1Columns = list(scoreFrame[player2].columns.values)
             player2Columns = list(scoreFrame[player2].columns.values)[::-1]
-            player1Map = {x:x + " 1" for x in player1Columns}
-            player2Map = {x:x + " 2" for x in player2Columns}
-            player1Frame = player1Frame[player1Columns]
-            player2Frame = player2Frame[player2Columns]
-            player1Frame.rename(player1Map, inplace=True)
-            player2Frame.rename(player2Map, inplace=True)
-            print(player1Frame)
-            print(player2Frame)
-            matchupFrame = pd.merge(player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'],)
-            msg = f"```{tabulate(matchupFrame, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
             
-            await ctx.send(msg)
-    
-    # else:
-    #     ctx.send("Fuck you", ctx.message.author)
+            player1Frame = player1Frame[player1Columns]
+            player1Frame['summoner_name'] = player1Frame['summoner_name'].str.ljust(12, ' ') + '(0/2)'
+            print(player1Frame)
+            player2Frame = player2Frame[player2Columns]
+            player2Frame['summoner_name'] = '(0/2)' + player2Frame['summoner_name'] .str.rjust(12, ' ')
+          
+            
+            matchupFrame = pd.merge(player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'])
+            matchupFrame.columns = ['role', player1, 'Fantasy Score', 'Fantasy Score', player2]
+            msg = f"```{tabulate(matchupFrame, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
+            await ctx.send(msg)  
 
 
 async def count(num, ctx):
