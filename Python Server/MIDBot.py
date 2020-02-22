@@ -29,9 +29,9 @@ async def on_ready():
     today = datetime.now()
     game_ts_result = session.query(Tournament_Schedule.start_ts).filter(Tournament_Schedule.start_ts > today).all()
     for start_ts in game_ts_result:
-        scheduler.add_job(utility.live_data, 'cron', start_date=start_ts[0])
+        scheduler.add_job(utility.live_data, 'date', run_date=start_ts[0])
     scheduler.start()
-    scheduler.print_jobs()
+    # scheduler.print_jobs()
 
 
 @MIDBot.event
@@ -207,19 +207,29 @@ async def fantasy(ctx, *args):
     elif args[0].lower() == "join":
         pass    
     elif args[0].lower() == "lcs":
+        
         Fantasy_Matchups = Base.classes.fantasy_matchups
+        FantasyTeam = Base.classes.fantasyteam
+        
         session = Session(engine)
+        
+        columns = ['role', 'summoner_name', 'fantasy_score']
         
         scoreFrame = utility.get_fantasy_league_table(engine, Base)
         
         serverid = ctx.message.guild.id
-        FantasyTeam = Base.classes.fantasyteam
+        
         tournamentidResult = session.query(FantasyTeam.tournamentid).filter(FantasyTeam.serverid == serverid).first()
         tournamentid = tournamentidResult[0]
 
         blockName = utility.get_block_name(engine, Base, tournamentid)
-        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == blockName)
 
+        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == blockName)
+        playerWeekProgressStatement = f"select summoner_name, num_games_left, num_total_games from week_progress where blockname = '{blockName}' and tournamentid = {tournamentid}"
+        teamWeekProgressStatement = f"select distinct code as summoner_name , num_games_left, num_total_games from week_progress where blockname = '{blockName}' and tournamentid = {tournamentid}"
+        week_progress = pd.read_sql(playerWeekProgressStatement, engine)
+        week_progress = pd.concat([week_progress, pd.read_sql(teamWeekProgressStatement, engine)], ignore_index=True)
+        print(week_progress)
         for matchup in matchups:
             player1 = matchup[0]
             player2 = matchup[1]
@@ -227,15 +237,30 @@ async def fantasy(ctx, *args):
             player1Frame = scoreFrame[player1]
             player2Frame = scoreFrame[player2]
             
-            player1Columns = list(scoreFrame[player2].columns.values)
+            player1Columns = list(scoreFrame[player1].columns.values)
             player2Columns = list(scoreFrame[player2].columns.values)[::-1]
             
+            player1Frame = pd.merge(player1Frame, week_progress, on='summoner_name')
+            player2Frame = pd.merge(player2Frame, week_progress, on='summoner_name')
+            
+            p1_total_games_left = sum(player1Frame.num_games_left)
+            p1_total_games = sum(player1Frame.num_total_games)
+            p2_total_games_left = sum(player2Frame.num_games_left)
+            p2_total_games = sum(player2Frame.num_total_games)
+
+            player1Frame['summoner_name'] = player1Frame['summoner_name'].str.ljust(12, ' ') + '(' + player1Frame.num_games_left.map(str) + '/' + player1Frame.num_total_games.map(str) +')'
             player1Frame = player1Frame[player1Columns]
-            player1Frame['summoner_name'] = player1Frame['summoner_name'].str.ljust(12, ' ') + '(0/2)'
-            print(player1Frame)
+            sumRow = {'role': 'Total', 'summoner_name': '(' + str(p1_total_games_left) + '/' + str(p1_total_games) +')', 'fantasy_score': sum(
+            player2Frame['fantasy_score'])}
+            player1Frame = pd.concat([player1Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
+            
+            player2Frame['summoner_name'] =  '(' + player2Frame.num_games_left.map(str) + '/' + player2Frame.num_total_games.map(str) +')' + player2Frame['summoner_name'] .str.rjust(12, ' ')
             player2Frame = player2Frame[player2Columns]
-            player2Frame['summoner_name'] = '(0/2)' + player2Frame['summoner_name'] .str.rjust(12, ' ')
-          
+            sumRow = {'role': 'Total', 'summoner_name': '(' + str(p2_total_games_left) + '/' + str(p2_total_games) +')', 'fantasy_score': sum(
+            player2Frame['fantasy_score'])}
+            player2Frame = pd.concat([player2Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
+            player2Frame = player2Frame[player2Columns]
+            
             
             matchupFrame = pd.merge(player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'])
             matchupFrame.columns = ['role', player1, 'Fantasy Score', 'Fantasy Score', player2]

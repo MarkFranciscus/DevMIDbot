@@ -519,7 +519,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
     
 
 
-def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid=103462439438682788):
+def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid= 103462439438682788):
     FantasyTeam = Base.classes.fantasyteam
     blockName = get_block_name(engine, Base, tournamentid)
     selectFantasyPlayerScore = f"""
@@ -586,7 +586,7 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
     roles = ['Top', 'Jungle', 'Mid', 'Bottom', 'Support', 'Flex', 'Team']
     session = Session(engine)
     selectFantasyTeams = session.query(FantasyTeam.username, FantasyTeam.top, FantasyTeam.jungle, FantasyTeam.mid,
-                                       FantasyTeam.bot, FantasyTeam.support, FantasyTeam.flex, FantasyTeam.team).filter(FantasyTeam.serverid == serverid)
+                                       FantasyTeam.bot, FantasyTeam.support, FantasyTeam.flex, FantasyTeam.team).filter(FantasyTeam.serverid == serverid, FantasyTeam.blockname == blockName)
 
     playerFantasyScores = pd.read_sql(selectFantasyPlayerScore, engine)
     teamFantasyScores = pd.read_sql(selectFantasyTeamScore, engine)
@@ -604,11 +604,9 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
         scoreTables[row[0]] = scoreTables[row[0]][columns]
         scoreTables[row[0]].fillna(0, inplace=True)
 
-        sumRow = {'role': 'Total', 'summoner_name': "     ", 'fantasy_score': sum(
-            scoreTables[row[0]]['fantasy_score'])}
-        sumFrame = pd.DataFrame(sumRow, index=[0])
-        scoreTables[row[0]] = pd.concat(
-            [scoreTables[row[0]], sumFrame], ignore_index=True)
+        
+        # scoreTables[row[0]] = pd.concat(
+        #     [scoreTables[row[0]], sumFrame], ignore_index=True)
         # print(list(scoreTables[row[0]].columns.values)[::-1])
     return scoreTables
 
@@ -616,7 +614,7 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
 def get_block_name(engine, Base, tournamentid):
     Tournament_Schedule = Base.classes.tournament_schedule
     session = Session(engine)
-    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.state != 'completed',
+    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.state != 'finished',
                                                                       Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
     return blockResult[0]
 
@@ -644,25 +642,6 @@ def live_data():
 
 if __name__ == "__main__":
     Base, engine = connect_database()
-# #     get_fantasy_league_table(engine, Base)
-#     # get_block_name(engine, Base, 103462439438682788)
-    # parse_gamedate(engine, Base, 98767991299243165, 103462439438682788, 103462440145619642, datetime.datetime.strptime('2020-01-27T20:30:00Z', '%Y-%m-%dT%H:%M:%SZ'))
 
-    database_insert_gamedata(engine, Base)
-    # live_data()
+    # database_insert_gamedata(engine, Base)
     
-    # m = multiprocessing.Manager()
-    # variable = m.Value('i', 60)
-
-    # scheduler = AsyncIOScheduler()
-    # # Tournament
-    # scheduler.add_job(live_data, 'interval', hours=1, start_date='2020-02-17 19:30:00')
-    # scheduler.start()
-
-    
-    # scheduler.print_jobs()
-
-    # try:
-    #     asyncio.get_event_loop().run_forever()
-    # except (KeyboardInterrupt, SystemExit):
-    #     pass

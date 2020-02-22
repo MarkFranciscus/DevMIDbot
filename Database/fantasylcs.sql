@@ -201,6 +201,15 @@ CREATE TABLE public.fantasy_matchups (
 	PRIMARY KEY (player_1, player_2, serverid, blockName)
 )
 
+create table public.remaining_games (
+	tournamentid BIGINT REFERENCES tournaments(tournamentid),
+	block_name TEXT,
+	code TEXT REFERENCES teams(code),
+	num_games_left INT,
+	num_total_games INT,
+	PRIMARY KEY (tournamentid, block_name, code)
+)
+
 INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('rhythmkiller#3594', 'Flailure#3447', 158269352980774912, 'Week 3');
 INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('Jesus', 'aReNGee#5138', 158269352980774912, 'Week 3');
 INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('Brady', 'Manning', 158269352980774912, 'Week 3');
