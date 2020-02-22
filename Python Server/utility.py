@@ -634,14 +634,12 @@ def live_data():
             event_details = lolesports.getEventDetails(matchid)
             gameid = event_details['match']['games'][0]['id']
             start_ts = event["startTime"]
-            start_ts_datetime = datetime.datetime.strptime(
-                start_ts, '%Y-%m-%dT%H:%M:%SZ')
-            parse_gamedate(engine, leagueid, tournamentid, gameid,
-                           start_ts_datetime, live_data=True)
+            start_ts_datetime = datetime.datetime.now()
+            parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
 
 
 if __name__ == "__main__":
-    Base, engine = connect_database()
-
+#     Base, engine = connect_database()
+    live_data()
     # database_insert_gamedata(engine, Base)
     
