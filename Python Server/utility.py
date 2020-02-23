@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import sqlalchemy
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from pandas import json_normalize
+from pandas.io.json import json_normalize
 from sqlalchemy import MetaData, Table, create_engine, inspect
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.automap import automap_base
@@ -643,8 +643,8 @@ def live_data():
             parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
 
 
-if __name__ == "__main__":
-    Base, engine = connect_database()
+# if __name__ == "__main__":
+    # Base, engine = connect_database()
     # live_data()
-    database_insert_gamedata(engine, Base)
+    # database_insert_gamedata(engine, Base)
     
