@@ -198,7 +198,7 @@ def getWindow(gameId, starting_time=""):
         matchid = rawData['esportsMatchId']
         return blueTeam, blueMetadata, redTeam, redMetadata, frames, matchid
     else:
-        # raise Exception(f"getWindow giving status code {r.status_code}")
+        raise Exception(f"getWindow giving status code {r.status_code}")
         pass
     
 def navItems():

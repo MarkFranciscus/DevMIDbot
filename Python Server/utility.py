@@ -310,13 +310,14 @@ def database_insert_gamedata(engine, Base):
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
     # print(str(gameid_result))
     for row in gameid_result:
-        # print(row.gameid)
+        if row.gameid == 103462440145619658:
+            continue
         parse_gamedate(engine, Base, row.leagueid, row.tournamentid, row.gameid, row.start_ts)
 
 
 def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_data=False):
-    if live_data == False:
-        start_ts += datetime.timedelta(hours=5)
+    # if live_data == False:
+    start_ts += datetime.timedelta(hours=5)
     date_time_obj = roundTime(start_ts)
     timestamps = []
     gameStartFlag = False
@@ -348,7 +349,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
             blueTeamID, blueMetadata, redTeamID, redMetadata, frames, matchid = lolesports.getWindow(
                 gameid, starting_time=timestamp)
         except Exception as error:
-            # print(f"{error} - {timestamp} - {gameid}")
+            print(f"{error} - {timestamp} - {gameid}")
             if live_data:
                 loopTime = time.time() - start_time
                 print("Game hasn't started yet")
@@ -376,6 +377,10 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
             state = frame['gameState']  # Checks if game is over
             # print(state)
             if state == 'paused':
+                if live_data:
+                    loopTime = time.time() - start_time
+                    print("Skipping over redudant frames")
+                    sleep(10 - loopTime)
                 continue
 
             participants = pd.DataFrame()
@@ -634,12 +639,12 @@ def live_data():
             event_details = lolesports.getEventDetails(matchid)
             gameid = event_details['match']['games'][0]['id']
             start_ts = event["startTime"]
-            start_ts_datetime = datetime.datetime.now()
+            start_ts_datetime = datetime.datetime.now() - datetime.timedelta(seconds=30)
             parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
 
 
 if __name__ == "__main__":
-#     Base, engine = connect_database()
-    live_data()
-    # database_insert_gamedata(engine, Base)
+    Base, engine = connect_database()
+    # live_data()
+    database_insert_gamedata(engine, Base)
     

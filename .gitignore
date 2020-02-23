@@ -61,3 +61,4 @@ target/
 *.ini
 config.txt
 Python Server/test.py
+.vscode/settings.json
