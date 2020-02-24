@@ -310,8 +310,7 @@ def database_insert_gamedata(engine, Base):
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
     # print(str(gameid_result))
     for row in gameid_result:
-        if row.gameid == 103462440145619658:
-            continue
+        # if row.gameid in [103462440145685324]:
         parse_gamedate(engine, Base, row.leagueid, row.tournamentid, row.gameid, row.start_ts)
 
 
@@ -643,8 +642,8 @@ def live_data():
             parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
 
 
-# if __name__ == "__main__":
-    # Base, engine = connect_database()
+if __name__ == "__main__":
+    Base, engine = connect_database()
     # live_data()
-    # database_insert_gamedata(engine, Base)
+    database_insert_gamedata(engine, Base)
     

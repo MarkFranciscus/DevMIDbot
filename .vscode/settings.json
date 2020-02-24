@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "/usr/bin/python3",
+    "python.pythonPath": "/home/mark/miniconda3/envs/midbot/bin/python",
     "python.formatting.provider": "autopep8"
 }

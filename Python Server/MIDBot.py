@@ -229,7 +229,6 @@ async def fantasy(ctx, *args):
         teamWeekProgressStatement = f"select distinct code as summoner_name , num_games_left, num_total_games from week_progress where blockname = '{blockName}' and tournamentid = {tournamentid}"
         week_progress = pd.read_sql(playerWeekProgressStatement, engine)
         week_progress = pd.concat([week_progress, pd.read_sql(teamWeekProgressStatement, engine)], ignore_index=True)
-        print(week_progress)
         for matchup in matchups:
             player1 = matchup[0]
             player2 = matchup[1]
