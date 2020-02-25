@@ -301,21 +301,18 @@ def database_insert_gamedata(engine, Base):
     Tournament_Schedule = Base.classes.tournament_schedule
     Tournaments = Base.classes.tournaments
     Player_Gamedata = Base.classes.player_gamedata
-    # SQL to get split id for given region
 
+    # SQL to get split id for given region
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.datetime.now()
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
-    # print(str(gameid_result))
     for row in gameid_result:
-        # if row.gameid in [103462440145685324]:
         parse_gamedate(engine, Base, row.leagueid, row.tournamentid, row.gameid, row.start_ts)
 
 
 def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_data=False):
-    # if live_data == False:
     start_ts += datetime.timedelta(hours=5)
     date_time_obj = roundTime(start_ts)
     timestamps = []
@@ -618,7 +615,7 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
 def get_block_name(engine, Base, tournamentid):
     Tournament_Schedule = Base.classes.tournament_schedule
     session = Session(engine)
-    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.state != 'finished',
+    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.start_ts >= datetime.datetime.now() - datetime.timedelta(days=2),
                                                                       Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
     return blockResult[0]
 
@@ -642,8 +639,8 @@ def live_data():
             parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
 
 
-if __name__ == "__main__":
-    Base, engine = connect_database()
+# if __name__ == "__main__":
+    # Base, engine = connect_database()
     # live_data()
-    database_insert_gamedata(engine, Base)
+    # database_insert_gamedata(engine, Base)
     
