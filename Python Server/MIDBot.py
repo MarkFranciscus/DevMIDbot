@@ -254,13 +254,13 @@ async def fantasy(ctx, *args):
             p2_total_games_left = sum(player2Frame.num_games_left)
             p2_total_games = sum(player2Frame.num_total_games)
 
-            player1Frame['summoner_name'] = player1Frame['code'] + ' ' + player1Frame['summoner_name'].str.ljust(12, ' ') + '(' + player1Frame.num_games_left.map(str) + '/' + player1Frame.num_total_games.map(str) +')'
+            player1Frame['summoner_name'] = player1Frame['code'].str.ljust(4, ' ') + ' ' + player1Frame['summoner_name'].str.ljust(16, ' ') + '(' + player1Frame.num_games_left.map(str) + '/' + player1Frame.num_total_games.map(str) +')'
             player1Frame = player1Frame[player1Columns]
             sumRow = {'role': 'Total', 'summoner_name': '(' + str(p1_total_games_left) + '/' + str(p1_total_games) +')', 'fantasy_score': sum(
             player1Frame['fantasy_score'])}
             player1Frame = pd.concat([player1Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
             
-            player2Frame['summoner_name'] =  '(' + player2Frame.num_games_left.map(str) + '/' + player2Frame.num_total_games.map(str) +')' + player2Frame['code'] + ' ' + player2Frame['summoner_name'] .str.rjust(12, ' ')
+            player2Frame['summoner_name'] =  '(' + player2Frame.num_games_left.map(str) + '/' + player2Frame.num_total_games.map(str) +')' + (player2Frame['summoner_name'] + ' ' + player2Frame['code']).str.rjust(12, ' ')
             player2Frame = player2Frame[player2Columns]
             sumRow = {'role': 'Total', 'summoner_name': '(' + str(p2_total_games_left) + '/' + str(p2_total_games) +')', 'fantasy_score': sum(
             player2Frame['fantasy_score'])}
