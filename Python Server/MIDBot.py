@@ -9,14 +9,16 @@ from discord.ext.commands import Bot
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_, text
-from tabulate import tabulate
+import tabulate
 from datetime import datetime
 import lolesports
 import utility
 
+tabulate.PRESERVE_WHITESPACE = True
 Base, engine = None, None
 
 MIDBot = Bot(command_prefix="!", case_insensitive=True)
+
 
 @MIDBot.event
 async def on_ready():
@@ -27,7 +29,8 @@ async def on_ready():
 
     Tournament_Schedule = Base.classes.tournament_schedule
     today = datetime.now()
-    game_ts_result = session.query(Tournament_Schedule.start_ts).filter(Tournament_Schedule.start_ts > today).all()
+    game_ts_result = session.query(Tournament_Schedule.start_ts).filter(
+        Tournament_Schedule.start_ts > today).all()
     for start_ts in game_ts_result:
         scheduler.add_job(utility.live_data, 'date', run_date=start_ts[0])
     scheduler.start()
@@ -63,7 +66,7 @@ async def setup(ctx, *args):
     member = ctx.message.author
     summoner = args[0]
     serverid = ctx.message.guild.id
-    
+
     discordinfo.discordname, discordinfo.summoner, discordinfo.serverid = member, summoner, serverid
     session.commit()
     await ctx.send("Tied @" + str(member) + " to " + args[0])  # success
@@ -100,11 +103,12 @@ async def pickem(ctx, *args):
         for row in pickem_result:
             i = 0
             player = [row.one, row.two, row.three, row.four,
-                              row.five, row.six, row.seven, row.eight, row.nine, row.ten]
+                      row.five, row.six, row.seven, row.eight, row.nine, row.ten]
             score = sum(lolesports.score(player, score_standings))
             player_pickems.append([row.username, row.one, row.two, row.three, row.four,
-                         row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
-        msg = "```" + utility.format_table(player_pickems, standings, args[0]) + "```"
+                                   row.five, row.six, row.seven, row.eight, row.nine, row.ten, score])
+        msg = "```" + \
+            utility.format_table(player_pickems, standings, args[0]) + "```"
 
     elif len(args) == 2:
         if args[1].lower() == "breakdown":
@@ -116,18 +120,17 @@ async def pickem(ctx, *args):
             # SQL to get split id for given region
             tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
                 and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
-            
+
             standings = lolesports.getStandings(tournamentID)
             score_standings = utility.format_standings(standings)
             pickem_result = session.query(Pickems).filter(
                 Pickems.tournamentid == tournamentID, Pickems.serverid == serverid, Pickems.username == username).first()
 
             player = [pickem_result.one, pickem_result.two, pickem_result.three, pickem_result.four,
-                    pickem_result.five, pickem_result.six, pickem_result.seven, pickem_result.eight, pickem_result.nine, pickem_result.ten]
+                      pickem_result.five, pickem_result.six, pickem_result.seven, pickem_result.eight, pickem_result.nine, pickem_result.ten]
             scores = lolesports.score(player, score_standings)
             scores += [sum(scores)]
-        
-            
+
             standingsTable = []
             for i in range(1, 11):
                 if i in standings.keys():
@@ -137,12 +140,13 @@ async def pickem(ctx, *args):
             standingsTable += [0]
             # print(standingsTable)
             labels = ["1st", "2nd", "3rd", "4th",
-                    "5th", "6th",  "7th", "8th", "9th", "10th", "Score"]
+                      "5th", "6th",  "7th", "8th", "9th", "10th", "Score"]
             # print (f"{len(labels)} - {len(standingsTable)} - {len(scores)}")
             player += ['']
-            breakdownDict = {'': labels, 'Standings': standingsTable, 'Pickem': player, 'Scores': scores}
+            breakdownDict = {
+                '': labels, 'Standings': standingsTable, 'Pickem': player, 'Scores': scores}
             breakdownFrame = pd.DataFrame(breakdownDict)
-            msg = f"```{tabulate(breakdownFrame, 'keys', tablefmt='fancy_grid', showindex=False)}```"
+            msg = f"```{tabulate.tabulate(breakdownFrame, 'keys', tablefmt='fancy_grid', showindex=False)}```"
     elif len(args) == 11:
 
         # if args[0].lower() not in regions:
@@ -205,73 +209,86 @@ async def fantasy(ctx, *args):
     elif args[0].lower() == "create":
         pass
     elif args[0].lower() == "join":
-        pass    
+        pass
     elif args[0].lower() == "lcs":
-        
+
         Fantasy_Matchups = Base.classes.fantasy_matchups
         FantasyTeam = Base.classes.fantasyteam
-        
+
         session = Session(engine)
-        
+
         columns = ['role', 'summoner_name', 'fantasy_score']
-        
+
         scoreFrame = utility.get_fantasy_league_table(engine, Base)
-        
+
         serverid = ctx.message.guild.id
-        
-        tournamentidResult = session.query(FantasyTeam.tournamentid).filter(FantasyTeam.serverid == serverid).first()
+
+        tournamentidResult = session.query(FantasyTeam.tournamentid).filter(
+            FantasyTeam.serverid == serverid).first()
         tournamentid = tournamentidResult[0]
 
         blockName = utility.get_block_name(engine, Base, tournamentid)
 
-        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(Fantasy_Matchups.blockname == blockName)
+        matchups = session.query(Fantasy_Matchups.player_1, Fantasy_Matchups.player_2).filter(
+            Fantasy_Matchups.blockname == blockName)
         playerWeekProgressStatement = f"select code, summoner_name, num_games_left, num_total_games from week_progress where blockname = '{blockName}' and tournamentid = {tournamentid}"
         teamWeekProgressStatement = f"select distinct code as summoner_name , num_games_left, num_total_games from week_progress where blockname = '{blockName}' and tournamentid = {tournamentid}"
         playerWeekProgress = pd.read_sql(playerWeekProgressStatement, engine)
         # playerWeekProgress['summoner_name'] = playerWeekProgress['code'] + ' ' + playerWeekProgress['summoner_name']
-        # playerWeekProgress.drop(['code'], axis=1) 
-        teamWeekProgress = pd.read_sql(teamWeekProgressStatement, engine) 
-        weekProgress = pd.concat([playerWeekProgress, teamWeekProgress], ignore_index=True)
+        # playerWeekProgress.drop(['code'], axis=1)
+        teamWeekProgress = pd.read_sql(teamWeekProgressStatement, engine)
+        weekProgress = pd.concat(
+            [playerWeekProgress, teamWeekProgress], ignore_index=True)
         await ctx.send(blockName)
-        
+
         for matchup in matchups:
             player1 = matchup[0]
             player2 = matchup[1]
-            
+
             player1Frame = scoreFrame[player1]
             player2Frame = scoreFrame[player2]
-            
+
             player1Columns = list(scoreFrame[player1].columns.values)
             player2Columns = list(scoreFrame[player2].columns.values)[::-1]
 
-            player1Frame = pd.merge(player1Frame, weekProgress, on='summoner_name')
+            player1Frame = pd.merge(
+                player1Frame, weekProgress, on='summoner_name')
             player1Frame.fillna('', inplace=True)
-            player2Frame = pd.merge(player2Frame, weekProgress, on='summoner_name')
+            player2Frame = pd.merge(
+                player2Frame, weekProgress, on='summoner_name')
             player2Frame.fillna('', inplace=True)
-            
+
             p1_total_games_left = sum(player1Frame.num_games_left)
             p1_total_games = sum(player1Frame.num_total_games)
             p2_total_games_left = sum(player2Frame.num_games_left)
             p2_total_games = sum(player2Frame.num_total_games)
 
-            player1Frame['summoner_name'] = player1Frame['code'].str.ljust(4, ' ') + ' ' + player1Frame['summoner_name'].str.ljust(16, ' ') + '(' + player1Frame.num_games_left.map(str) + '/' + player1Frame.num_total_games.map(str) +')'
+            player1Frame['summoner_name'] = (player1Frame['code'].str.ljust(4, ' ') + ' ' + player1Frame['summoner_name']).str.ljust(
+                17, ' ') + ' (' + player1Frame.num_games_left.map(str) + '/' + player1Frame.num_total_games.map(str) + ')'
             player1Frame = player1Frame[player1Columns]
-            sumRow = {'role': 'Total', 'summoner_name': '(' + str(p1_total_games_left) + '/' + str(p1_total_games) +')', 'fantasy_score': sum(
-            player1Frame['fantasy_score'])}
-            player1Frame = pd.concat([player1Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
+            sumRow = {'role': 'Total', 'summoner_name': '(' + str(p1_total_games_left) + '/' + str(p1_total_games) + ')', 'fantasy_score': sum(
+                player1Frame['fantasy_score'])}
             
-            player2Frame['summoner_name'] =  '(' + player2Frame.num_games_left.map(str) + '/' + player2Frame.num_total_games.map(str) +')' + (player2Frame['summoner_name'] + ' ' + player2Frame['code']).str.rjust(12, ' ')
+            player1Frame = pd.concat(
+                [player1Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
+
+            player2Frame['summoner_name'] = '(' + player2Frame.num_games_left.map(str) + '/' + player2Frame.num_total_games.map(
+                str) + ') ' + (player2Frame['summoner_name'] + ' ' + player2Frame['code']).str.rjust(12, ' ')
             player2Frame = player2Frame[player2Columns]
-            sumRow = {'role': 'Total', 'summoner_name': '(' + str(p2_total_games_left) + '/' + str(p2_total_games) +')', 'fantasy_score': sum(
-            player2Frame['fantasy_score'])}
-            player2Frame = pd.concat([player2Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
+
+            sumRow = {'role': 'Total', 'summoner_name': '(' + str(p2_total_games_left) + '/' + str(p2_total_games) + ')', 'fantasy_score': sum(
+                player2Frame['fantasy_score'])}
+
+            player2Frame = pd.concat(
+                [player2Frame, pd.DataFrame(sumRow, index=[0])], ignore_index=True)
             player2Frame = player2Frame[player2Columns]
-            
-            
-            matchupFrame = pd.merge(player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'])
-            matchupFrame.columns = ['role', player1, 'Fantasy Score', 'Fantasy Score', player2]
-            msg = f"```{tabulate(matchupFrame, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
-            await ctx.send(msg)  
+
+            matchupFrame = pd.merge(
+                player1Frame, player2Frame, on='role', suffixes=[' 1', ' 2'])
+            matchupFrame.columns = ['role', player1,
+                                    'Fantasy Score', 'Fantasy Score', player2]
+            msg = f"```{tabulate.tabulate(matchupFrame, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
+            await ctx.send(msg)
 
 
 async def count(num, ctx):
@@ -280,7 +297,6 @@ async def count(num, ctx):
         await ctx.channel.send(str(i))
         await sleep(1 - MIDBot.latency)
         end_time = time.time()
-
 
 
 @MIDBot.command()
