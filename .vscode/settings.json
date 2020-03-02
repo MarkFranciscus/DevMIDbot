@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "/home/mark/miniconda3/envs/midbot/bin/python",
+    "python.pythonPath": "C:\\Users\\Mark\\Anaconda3\\python.exe",
     "python.formatting.provider": "autopep8"
 }

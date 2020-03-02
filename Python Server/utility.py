@@ -639,8 +639,8 @@ def live_data():
             parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
 
 
-# if __name__ == "__main__":
-    # Base, engine = connect_database()
+if __name__ == "__main__":
+    Base, engine = connect_database()
     # live_data()
-    # database_insert_gamedata(engine, Base)
+    database_insert_gamedata(engine, Base)
     
