@@ -12,16 +12,16 @@ import dateutil.parser
 import numpy as np
 import pandas as pd
 import sqlalchemy
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pandas.io.json import json_normalize
 from sqlalchemy import MetaData, Table, create_engine, inspect
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.sql import and_, text
-from tabulate import tabulate
 
 import lolesports
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from tabulate import tabulate
 
 conn = None
 Base = None
@@ -214,7 +214,6 @@ def database_insert_players(engine):
 def database_insert_schedule(engine):
     leagues = lolesports.getLeagues()
     schedule = pd.DataFrame()
-
     for leagueID in leagues['id']:
         events = lolesports.getSchedule(leagueId=leagueID)
         tournaments = lolesports.getTournamentsForLeague(leagueID)
@@ -223,10 +222,18 @@ def database_insert_schedule(engine):
         p = (tournaments['startdate'] <= dt) & (dt <= tournaments['enddate'])
         tournaments['iscurrent'] = np.where(p, True, False)
         tournaments = tournaments[tournaments['iscurrent'] == True]
-
+    
         for event in events:
+            startTime = dateutil.parser.isoparse(event['startTime'])
+            p = (tournaments['startdate'] <= startTime) & (
+                startTime < tournaments['enddate'])
+            # print(tournaments.loc[p, 'id'].iloc[0])
             if event['type'] != "match":
                 continue
+            # print(tournaments)
+            if event['blockName'] not in ['Week 8', 'Week 9']:
+                continue
+            # print(event['blockName'])
             d = {}
             gameid = lolesports.getEventDetails(event['match']['id'])[
                 'match']['games'][0]["id"]
@@ -246,7 +253,7 @@ def database_insert_schedule(engine):
             d['tournamentid'] = [tournaments.loc[p, 'id'].iloc[0]]
             if d['tournamentid'] in [102147203732523011, 103540419468532110]:
                 continue
-
+            # print(gameid)
             temp = pd.DataFrame().from_dict(d)
             schedule = pd.concat([schedule, temp], ignore_index=True)
 
@@ -270,11 +277,12 @@ def round_robin(teams):
     random.shuffle(schedule)
     return(schedule)
 
+
 # def weekly_schedule(teams, schedule):
 #     for week in range(8):
 
 
-def roundTime(dt=None, roundTo=10):
+def round_time(dt=None, roundTo=10):
     """Round a datetime object to any time lapse in seconds"""
     if dt == None:
         dt = datetime.datetime.now()
@@ -301,20 +309,23 @@ def database_insert_gamedata(engine, Base):
     Tournament_Schedule = Base.classes.tournament_schedule
     Tournaments = Base.classes.tournaments
     Player_Gamedata = Base.classes.player_gamedata
-
+    
     # SQL to get split id for given region
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.datetime.now()
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 103462439438682788, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+    
     for row in gameid_result:
-        parse_gamedate(engine, Base, row.leagueid, row.tournamentid, row.gameid, row.start_ts)
+        print(row)
+        parse_gamedate(engine, Base, row.leagueid,
+                       row.tournamentid, row.gameid, row.start_ts)
 
 
 def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_data=False):
-    start_ts += datetime.timedelta(hours=5)
-    date_time_obj = roundTime(start_ts)
+    start_ts += datetime.timedelta(hours=4)
+    date_time_obj = round_time(start_ts)
     timestamps = []
     gameStartFlag = False
     blueFirstBlood = False
@@ -404,8 +415,6 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
                 player['gameid'] = gameid
                 player['frame_ts'] = frame['rfc460Timestamp']
 
-            
-
             blueTeam['dragons'] = len(blueTeam['dragons'])
             blueTeam['gameid'] = gameid
             blueTeam['teamid'] = blueTeamID
@@ -452,9 +461,10 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
                         continue
                 session = Session(engine)
                 Tournament_Schedule = Base.classes.tournament_schedule
-                game = session.query(Tournament_Schedule).filter(Tournament_Schedule.gameid == gameid).first()
+                game = session.query(Tournament_Schedule).filter(
+                    Tournament_Schedule.gameid == gameid).first()
                 game.state = 'finished'
-                
+
                 if blueWin:
                     blueTeam['win'] = True
                     endTS = datetime.datetime.strptime(
@@ -469,15 +479,16 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
                     redTeam['under_30'] = endTS - \
                         startTS < datetime.timedelta(minutes=30)
                     game.winner_code = redCode
-                print(f"game id: {gameid} - block:{game.blockname} - winner: {game.winner_code}")
+                print(
+                    f"game id: {gameid} - block:{game.blockname} - winner: {game.winner_code}")
                 session.commit()
-            
+
             # Checks if frame is redundant
             if frame['rfc460Timestamp'] in timestamps:
                 continue
             else:
                 timestamps.append(frame['rfc460Timestamp'])
-            
+
             participants = pd.concat([participants, pd.DataFrame().from_dict(
                 json_normalize(bluePlayers)), pd.DataFrame().from_dict(
                 json_normalize(redPlayers))], ignore_index=True)
@@ -517,10 +528,8 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts, live_
             print("Data parsed")
             sleep(10 - loopTime)
 
-    
 
-
-def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid= 103462439438682788):
+def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tournamentid=103462439438682788):
     FantasyTeam = Base.classes.fantasyteam
     blockName = get_block_name(engine, Base, tournamentid)
     selectFantasyPlayerScore = f"""
@@ -605,7 +614,6 @@ def get_fantasy_league_table(engine, Base, serverid=158269352980774912, tourname
         scoreTables[row[0]] = scoreTables[row[0]][columns]
         scoreTables[row[0]].fillna(0, inplace=True)
 
-        
         # scoreTables[row[0]] = pd.concat(
         #     [scoreTables[row[0]], sumFrame], ignore_index=True)
         # print(list(scoreTables[row[0]].columns.values)[::-1])
@@ -636,11 +644,24 @@ def live_data():
             gameid = event_details['match']['games'][0]['id']
             start_ts = event["startTime"]
             start_ts_datetime = datetime.datetime.now() - datetime.timedelta(seconds=30)
-            parse_gamedate(engine, Base, leagueid, tournamentid, gameid, start_ts_datetime, live_data=True)
+            parse_gamedate(engine, Base, leagueid, tournamentid,
+                           gameid, start_ts_datetime, live_data=True)
+
+
+# def check_role_constraint(players, role, serverid, summoner_name, Base):
+#     constraint = 2
+#     role_count = {"top": 0, "jungle": 0, "mid": 0, "bot": 0, "support": 0, "team": 0}
+#     Players = Base.classes.players
+#     FantasyTeam = Base.classes.fantasyteam
+
+
+
+
+    
 
 
 if __name__ == "__main__":
     Base, engine = connect_database()
     # live_data()
+    # database_insert_schedule(engine)
     database_insert_gamedata(engine, Base)
-    

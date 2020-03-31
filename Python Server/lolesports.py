@@ -212,7 +212,7 @@ def videos():
 def score(players_standings, real_standings):
     score = []
     for i in range(0, 10, 1):
-        score += [(i - real_standings[players_standings[i]])**2]
+        score += [(i+1 - real_standings[players_standings[i]])**2]
         # print(f"{players_standings[i]} - {score}")
     return score
 

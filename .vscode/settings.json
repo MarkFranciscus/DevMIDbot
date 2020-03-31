@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\Mark\\Anaconda3\\python.exe",
+    "python.pythonPath": "C:\\Users\\Mark\\Anaconda3\\envs\\MIDBot\\python.exe",
     "python.formatting.provider": "autopep8"
 }

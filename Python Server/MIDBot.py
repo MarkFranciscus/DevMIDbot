@@ -240,7 +240,7 @@ async def fantasy(ctx, *args):
         weekProgress = pd.concat(
             [playerWeekProgress, teamWeekProgress], ignore_index=True)
         await ctx.send(blockName)
-
+        
         for matchup in matchups:
             player1 = matchup[0]
             player2 = matchup[1]
