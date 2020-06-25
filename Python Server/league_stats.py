@@ -11,22 +11,6 @@ numberToTier = {0: 'bronze', 1: 'Silver', 2: 'Gold', 3: 'Platinum', 4: 'Diamond'
 divisionToNumber = {'five': 0, 'four': 1, 'three': 2, 'two': 3, 'one':4}
 numberToDivision = {0:'V', 1:'IV',2:'III',3:'II',4:'I'}
 
-def shitter(usernames):
-
-    eloList = []
-    for user in usernames:
-        newSummoner = riotapi.get_summoner(name=user[0].strip())
-        currentUser = riotapi.get_league_entries_by_summoner(summoners=newSummoner)
-        if len(eloList) == 0:
-            eloList.append([tierToNumber[str(currentUser[1].tier)[5:]], divisionToNumber[str(currentUser[1].entries[0].division)[9:]], currentUser[1].entries[0].league_points, currentUser[1].entries[0].summoner])
-        else:
-            eloList.append([tierToNumber[str(currentUser[1].tier)[5:]], divisionToNumber[str(currentUser[1].entries[0].division)[9:]], currentUser[1].entries[0].league_points, currentUser[1].entries[0].summoner])
-            eloList = (sorted(eloList, key=itemgetter(0, 1, 2)))
-            eloList.pop()
-
-
-    return str(eloList[0][3].name) + " is the shitter - " + str( numberToTier[eloList[0][0]]) + " " + str(numberToDivision[eloList[0][1]]) + " " + str(eloList[0][2]) + " LP"
-
 def last_10_games(username):
     summoner = riotapi.get_summoner(name=username)
     win = 0

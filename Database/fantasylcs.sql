@@ -203,13 +203,19 @@ CREATE TABLE public.fantasy_matchups (
 
 create table public.remaining_games (
 	tournamentid BIGINT REFERENCES tournaments(tournamentid),
-	block_name TEXT,
+	blockname TEXT,
 	code TEXT REFERENCES teams(code),
 	num_games_left INT,
 	num_total_games INT,
 	PRIMARY KEY (tournamentid, block_name, code)
 )
 
-INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('rhythmkiller#3594', 'Flailure#3447', 158269352980774912, 'Week 3');
-INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('Jesus', 'aReNGee#5138', 158269352980774912, 'Week 3');
-INSERT INTO public.fantasy_matchups (player_1, player_2, serverid, blockname) VALUES('Brady', 'Manning', 158269352980774912, 'Week 3');
+CREATE TABLE public.weekly_predictions (
+	serverid int8,
+	discordname TEXT,
+	gameid int8 REFERENCES tournament_schedule(gameid),
+	blockname TEXT,
+	winner TEXT REFERENCES teams(slug),
+	PRIMARY KEY (discordname, serverid, gameid),
+	FOREIGN KEY (serverid, discordname) REFERENCES discordinfo (serverid, discordname)	
+);
