@@ -743,8 +743,15 @@ def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, 
     return players, killTracker
 
 
-if __name__ == "__main__":
-    Base, engine = connect_database()
+def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, discordName, gameID):
+	Predictions = Base.classes.predictions
+	predictionRows = [{'serverid': serverID, 'discordname': discordName, 'gameid':gameID, 'winner': team} for team in teams]
+	predictionInsert = Predictions.insert(predictionRows)
+
+	engine.execute(predictionInsert)
+
+# if __name__ == "__main__":
+#     Base, engine = connect_database()
     # live_data()
     # database_insert_schedule(engine)
     # database_insert_gamedata(engine, Base)
@@ -754,4 +761,4 @@ if __name__ == "__main__":
     # print(current_tournaments)
     # database_insert_teams(current_tournaments)
     # database_insert_schedule(engine)
-    database_insert_gamedata(engine, Base)
+    # database_insert_gamedata(engine, Base)

@@ -291,6 +291,38 @@ async def fantasy(ctx, *args):
             await ctx.send(msg)
 
 
+@MIDBot.command(pass_context=True)
+async def schedule(ctx, *args):
+    """ !schedule <region> <week(optional)>"""
+    global Base, engine
+    session = Session(engine)
+    region = args[0].lower()
+    Tournaments = Base.classes.tournaments
+    Tournament_Schedule = Base.classes.tournament_schedule
+    # Teams = Base.classes.Teams
+    #  = Base.classes.pickems
+    Leagues = Base.classes.leagues
+
+    # SQL to get split id for given region
+    tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
+                and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
+
+    blockName = utility.get_block_name(engine, Base, tournamentID)
+
+    games = session.query(Tournament_Schedule).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID))
+    result = "```"
+    for row in games:
+        result += row.team1code + " vs. " + row.team2code + "\n"
+    result += "```" 
+    await ctx.channel.send(result)
+
+
+@MIDBot.command(pass_context=True)
+async def predict(ctx, *args):
+    """ !predict <region> <slug> ... <slug> """
+    await ctx.channel.send("Stored")
+
+
 async def count(num, ctx):
     """Countdown; print messages to the channel while command isn't stopped/halted"""
     for i in range(num, -1, -1):
