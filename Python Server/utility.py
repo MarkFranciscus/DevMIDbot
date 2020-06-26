@@ -743,12 +743,12 @@ def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, 
     return players, killTracker
 
 
-def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, discordName, gameID):
-	Predictions = Base.classes.predictions
-	predictionRows = [{'serverid': serverID, 'discordname': discordName, 'gameid':gameID, 'winner': team} for team in teams]
-	predictionInsert = Predictions.insert(predictionRows)
+def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, discordName, gameIDs):
+	Weekly_Predictions = Base.classes.weekly_predictions
+	predictionRows = [{'serverid': serverID, 'discordname': discordName, 'blockname': blockName, 'gameid':gameID, 'winner': team} for team, gameID in zip(teams, gameIDs)]
+	print(predictionRows)
 
-	engine.execute(predictionInsert)
+	engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
 
 # if __name__ == "__main__":
 #     Base, engine = connect_database()

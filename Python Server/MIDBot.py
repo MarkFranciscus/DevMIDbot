@@ -8,7 +8,7 @@ import sqlalchemy
 from discord.ext.commands import Bot
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import and_, text
+from sqlalchemy.sql import and_, text, func
 import tabulate
 from datetime import datetime
 import lolesports
@@ -310,7 +310,7 @@ async def schedule(ctx, *args):
     blockName = utility.get_block_name(engine, Base, tournamentID)
 
     games = session.query(Tournament_Schedule).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID))
-    result = "```"
+    result = f"```{region} - {blockName}\n"
     for row in games:
         result += row.team1code + " vs. " + row.team2code + "\n"
     result += "```" 
@@ -319,7 +319,55 @@ async def schedule(ctx, *args):
 
 @MIDBot.command(pass_context=True)
 async def predict(ctx, *args):
+    global Base, engine
     """ !predict <region> <slug> ... <slug> """
+    session = Session(engine)
+    region = args[0].lower()
+    Tournaments = Base.classes.tournaments
+    Pickems = Base.classes.pickems
+    Leagues = Base.classes.leagues
+    Weekly_Predictions = Base.classes.weekly_predictions
+    Tournament_Schedule = Base.classes.tournament_schedule
+
+    username = str(ctx.message.author)
+    serverID = ctx.message.guild.id
+    
+    # SQL to get split id for given region
+    tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
+        and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
+
+    blockName = utility.get_block_name(engine, Base, tournamentID)
+
+    teams = lolesports.getCodes(tournamentID)
+    picks = args[1:]
+    team2code = {}
+    similarity = {}
+    for pick in picks:
+        similarity[pick] = []
+        for team in teams:
+            similarity[pick] += [team,
+                                    utility.similar(pick.lower(), team.lower())]
+            if utility.similar(pick.lower(), team.lower()) > 0.6:
+                team2code[pick] = team
+                break
+
+    for pick in picks:
+        if pick not in team2code.keys():
+            msg = "Pick {} isn't a valid team".format(pick)
+            break
+    
+    games = session.query(Tournament_Schedule.gameid).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID))
+    gameIDs = [game[0] for game in games]
+    utility.insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, username, gameIDs)
+    
+    # prediction_result = session.query(Weekly_Predictions, func).filter(
+    #     and_(Weekly_Predictions.tournamentid == tournamentID, Weekly_Predictions.serverid == serverid, Weekly_Predictions.discordname == username)).all()
+
+    # prediction_result = pd.read_sql()
+
+    # temp = {"team1code": "Total", }
+    # column_map = {'team1code': "Team" "team2code": "Team", "winner": "Prediction", "Correct":}
+    
     await ctx.channel.send("Stored")
 
 
