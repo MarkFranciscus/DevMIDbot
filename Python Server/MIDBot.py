@@ -42,13 +42,13 @@ async def on_read():
     print("Client logged in")
 
 
-# Command for the sake of testing, prints serverid ten times
-@MIDBot.command(pass_context=True)
-async def test(ctx, *args):
-    strtest = "```"
-    strtest += str(ctx.message.guild.id)
-    strtest += '```'
-    await ctx.send(strtest)
+# # Command for the sake of testing, prints serverid ten times
+# @MIDBot.command(pass_context=True)
+# async def test(ctx, *args):
+#     strtest = "```"
+#     strtest += str(ctx.message.guild.id)
+#     strtest += '```'
+#     await ctx.send(strtest)
 
 
 # In progress
@@ -337,38 +337,49 @@ async def predict(ctx, *args):
         and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
 
     blockName = utility.get_block_name(engine, Base, tournamentID)
+    
+    if len(args) > 4:
+        teams = lolesports.getCodes(tournamentID)
+        picks = args[1:]
+        team2code = {}
+        similarity = {}
+        for pick in picks:
+            similarity[pick] = []
+            for team in teams:
+                similarity[pick] += [team,
+                                        utility.similar(pick.lower(), team.lower())]
+                if utility.similar(pick.lower(), team.lower()) > 0.6:
+                    team2code[pick] = team
+                    break
 
-    teams = lolesports.getCodes(tournamentID)
-    picks = args[1:]
-    team2code = {}
-    similarity = {}
-    for pick in picks:
-        similarity[pick] = []
-        for team in teams:
-            similarity[pick] += [team,
-                                    utility.similar(pick.lower(), team.lower())]
-            if utility.similar(pick.lower(), team.lower()) > 0.6:
-                team2code[pick] = team
+        for pick in picks:
+            if pick not in team2code.keys():
+                msg = "Pick {} isn't a valid team".format(pick)
                 break
+        
+        games = session.query(Tournament_Schedule.gameid).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID))
+        gameIDs = [game[0] for game in games]
+        utility.insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, username, gameIDs)
+        msg = "Stored"
+    # elif len(args) == 1:
+        # prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
+        #     and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
 
-    for pick in picks:
-        if pick not in team2code.keys():
-            msg = "Pick {} isn't a valid team".format(pick)
-            break
-    
-    games = session.query(Tournament_Schedule.gameid).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID))
-    gameIDs = [game[0] for game in games]
-    utility.insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, username, gameIDs)
-    
-    # prediction_result = session.query(Weekly_Predictions, func).filter(
-    #     and_(Weekly_Predictions.tournamentid == tournamentID, Weekly_Predictions.serverid == serverid, Weekly_Predictions.discordname == username)).all()
 
-    # prediction_result = pd.read_sql()
-
-    # temp = {"team1code": "Total", }
-    # column_map = {'team1code': "Team" "team2code": "Team", "winner": "Prediction", "Correct":}
+        # print(prediction_result.statement)
+        
+        # prediction_result = pd.read_sql(prediction_result.statement, engine)
+        # print(prediction_result)
+        # last_row = {"team1code": "Total", "team2code": "", "winner": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
+        # prediction_result = prediction_result[["team1code", "team2code", "winner", "correct"]]
+        # prediction_result.to_csv("predict.csv")
+        # prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
+        # prediction_result.columns = ["Team", "Team", "Prediction", "Correct"]
+        # # print(prediction_result)
+        # # msg = "reading predictions"
+        # msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
     
-    await ctx.channel.send("Stored")
+    await ctx.channel.send(msg)
 
 
 async def count(num, ctx):
@@ -395,12 +406,6 @@ async def commands(ctx):
                """
 
     await ctx.send(commands)
-
-
-# inprogress
-@MIDBot.command()
-async def lcs(ctx):
-    await ctx.send("123")
 
 
 if __name__ == '__main__':
