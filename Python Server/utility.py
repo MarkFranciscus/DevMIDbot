@@ -635,7 +635,7 @@ def get_fantasy_league_table(engine, Base, serverid, tournamentid=10346243943868
 def get_block_name(engine, Base, tournamentid):
     Tournament_Schedule = Base.classes.tournament_schedule
     session = Session(engine)
-    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.start_ts >= datetime.datetime.now() - datetime.timedelta(days=2),
+    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.start_ts >= datetime.datetime.now() - datetime.timedelta(days=3),
                                                                       Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
     return blockResult[0]
 
