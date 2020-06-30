@@ -383,7 +383,7 @@ async def predict(ctx, *args):
         prediction_result = pd.read_sql(prediction_result.statement, engine)
         prediction_result["correct"] = prediction_result["winner"] == prediction_result["winner_code"]
         # prediction_result[prediction_result["winner"] != prediction_result["winner_code"]] = False
-        last_row = {"team1code": "Total", "team2code": "", "winner_code": "", "winner": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
+        last_row = {"team1code": "Total", "team2code": "", "winner": "", "winner_code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
         prediction_result = prediction_result[["team1code", "team2code", "winner", "winner_code", "correct"]]
         prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
         print(prediction_result)
