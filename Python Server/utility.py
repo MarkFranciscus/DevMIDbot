@@ -757,14 +757,14 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
 
     engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
 
-def update_predictions(engine, username):
+def update_predictions(engine, username,serverID):
     stmtFalse = text(f"""UPDATE weekly_predictions SET correct=false WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
                     FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
-                    WHERE weekly_predictions.discorname={username} AND tournament_schedule.winner_code != weekly_predictions.winner)""")
+                    WHERE tournament_schedule.winner_code != weekly_predictions.winner) and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
 
     stmtTrue = text(f"""UPDATE weekly_predictions SET correct=true WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
                     FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
-                    WHERE weekly_predictions.discorname={username} AND tournament_schedule.winner_code = weekly_predictions.winner)""")
+                    WHERE tournament_schedule.winner_code = weekly_predictions.winner) and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
 
     engine.execute(stmtFalse)
     engine.execute(stmtTrue)
@@ -773,7 +773,6 @@ def update_predictions(engine, username):
 # if __name__ == "__main__":
 #     Base, engine = connect_database()
 #     update_predictions(engine)
-    # live_data()
     # database_insert_schedule(engine)
     # database_insert_gamedata(engine, Base)
     # leagues = database_insert_leagues(engine)
