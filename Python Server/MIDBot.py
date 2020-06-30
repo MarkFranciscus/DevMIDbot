@@ -376,6 +376,7 @@ async def predict(ctx, *args):
             utility.insert_predictions(engine, Base, predictions, blockName, tournamentID, serverID, username, gameIDs)
             msg = "Stored"
     elif len(args) == 1:
+        utility.update_predictions(engine)
         prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
             and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
 
