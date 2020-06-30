@@ -14,7 +14,7 @@ import pandas as pd
 import sqlalchemy
 from pandas import json_normalize
 # from pandas.io.json import json_normalize
-from sqlalchemy import MetaData, Table, create_engine, inspect
+from sqlalchemy import MetaData, Table, create_engine, inspect, select
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session, sessionmaker
@@ -345,7 +345,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                     'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
 
     print(f"Starting game {gameID}")
-    while state != "completed":
+    while state != "finished":
 
         start_time = time.time()
         player_data = pd.DataFrame()
@@ -432,7 +432,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
             blueTeam = team_update(
                 blueTeam, redTeam, gameID, blueTeamID, frameTS, blueFirstBlood)
             redTeam = team_update(
-				redTeam, blueTeam, gameID, redTeamID, frameTS, redFirstBlood)
+                redTeam, blueTeam, gameID, redTeamID, frameTS, redFirstBlood)
 
             if blueTeam['first_blood']:
                 blueFirstBlood = True
@@ -440,7 +440,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 redFirstBlood = True
 
             # Checks which team won
-            if state == "completed":
+            if state == "finished":
 
                 events = lolesports.getSchedule(leagueid)
                 for event in events:
@@ -463,8 +463,8 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 session = Session(engine)
                 Tournament_Schedule = Base.classes.tournament_schedule
                 game = session.query(Tournament_Schedule).filter(
-                    Tournament_Schedule.gameid == gameid).first()
-                game.state = 'completed'
+                    Tournament_Schedule.gameid == gameID).first()
+                game.state = 'finished '
 
                 if blueWin:
                     blueTeam['win'] = True
@@ -481,7 +481,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                         startTS < datetime.timedelta(minutes=30)
                     game.winner_code = redCode
                 print(
-                    f"game id: {gameid} - block:{game.blockname} - winner: {game.winner_code}")
+                    f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
                 session.commit()
 
             # Checks if frame is redundant
@@ -519,6 +519,10 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 loopTime = time.time() - start_time
                 print("Game is paused")
                 sleep(10 - loopTime)
+            continue
+
+        print(player_data)
+        if player_data.empty:
             continue
 
         player_data[['code', 'summoner_name']] = player_data['summonerName'].str.split(
@@ -656,6 +660,8 @@ def live_data():
                            gameid, start_ts_datetime, live_data=True)
 
 # Timeout check not working
+
+
 def multikill(player, enemyPlayers, teamKills, prevTeamKills, currentTS):
     allEnemiesDead = True
 
@@ -744,14 +750,17 @@ def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, 
 
 
 def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, discordName, gameIDs):
-	Weekly_Predictions = Base.classes.weekly_predictions
-	predictionRows = [{'serverid': serverID, 'discordname': discordName, 'blockname': blockName, 'gameid':gameID, 'winner': team} for team, gameID in zip(teams, gameIDs)]
-	print(predictionRows)
+    Weekly_Predictions = Base.classes.weekly_predictions
+    predictionRows = [{'serverid': serverID, 'discordname': discordName, 'blockname': blockName,
+                       'gameid': gameID, 'winner': team} for team, gameID in zip(teams, gameIDs)]
+    # print(predictionRows)
 
-	engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
+    engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
+
 
 # if __name__ == "__main__":
 #     Base, engine = connect_database()
+#     update_predictions(engine, Base)
     # live_data()
     # database_insert_schedule(engine)
     # database_insert_gamedata(engine, Base)

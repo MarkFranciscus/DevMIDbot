@@ -356,28 +356,35 @@ async def predict(ctx, *args):
             if pick not in team2code.keys():
                 msg = "Pick {} isn't a valid team".format(pick)
                 break
-        
-        games = session.query(Tournament_Schedule.gameid).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID))
-        gameIDs = [game[0] for game in games]
-        utility.insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, username, gameIDs)
-        msg = "Stored"
-    # elif len(args) == 1:
-        # prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
-        #     and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
 
-
-        # print(prediction_result.statement)
+        predictions = []
+        for i in range(1, 11, 1):
+            predictions.append(team2code[args[i]])
         
-        # prediction_result = pd.read_sql(prediction_result.statement, engine)
-        # print(prediction_result)
-        # last_row = {"team1code": "Total", "team2code": "", "winner": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
-        # prediction_result = prediction_result[["team1code", "team2code", "winner", "correct"]]
-        # prediction_result.to_csv("predict.csv")
-        # prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
-        # prediction_result.columns = ["Team", "Team", "Prediction", "Correct"]
-        # # print(prediction_result)
-        # # msg = "reading predictions"
-        # msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
+        games = session.query(Tournament_Schedule.gameid, Tournament_Schedule.team1code, Tournament_Schedule.team2code).filter(and_(Tournament_Schedule.blockname == blockName, Tournament_Schedule.tournamentid == tournamentID)).order_by(Tournament_Schedule.start_ts)
+        teams = [(game[1], game[2]) for game in games]
+        
+        flag = False
+        for i in range(len(predictions)):
+            if predictions[i] not in teams[i]:
+                # print(predictions[i], teams[i])
+                flag = True
+        if flag:
+            msg = "Teams out of order"
+        else:            
+            gameIDs = [game[0] for game in games]
+            utility.insert_predictions(engine, Base, predictions, blockName, tournamentID, serverID, username, gameIDs)
+            msg = "Stored"
+    elif len(args) == 1:
+        prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
+            and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
+
+        prediction_result = pd.read_sql(prediction_result.statement, engine)
+        last_row = {"team1code": "Total", "team2code": "", "winner": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
+        prediction_result = prediction_result[["team1code", "team2code", "winner", "correct"]]
+        prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
+        prediction_result.columns = ["Team", "Team", "Prediction", "Correct"]
+        msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
     
     await ctx.channel.send(msg)
 
