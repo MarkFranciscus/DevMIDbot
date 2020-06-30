@@ -757,14 +757,14 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
 
     engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
 
-def update_predictions(engine):
-    stmtFalse = text("""UPDATE weekly_predictions SET correct=false WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
+def update_predictions(engine, username):
+    stmtFalse = text(f"""UPDATE weekly_predictions SET correct=false WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
                     FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
-                    WHERE tournament_schedule.gameid = weekly_predictions.gameid AND tournament_schedule.winner_code != weekly_predictions.winner)""")
+                    WHERE weekly_predictions.discorname={username} AND tournament_schedule.winner_code != weekly_predictions.winner)""")
 
-    stmtTrue = text("""UPDATE weekly_predictions SET correct=true WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
+    stmtTrue = text(f"""UPDATE weekly_predictions SET correct=true WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
                     FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
-                    WHERE tournament_schedule.gameid = weekly_predictions.gameid AND tournament_schedule.winner_code = weekly_predictions.winner)""")
+                    WHERE weekly_predictions.discorname={username} AND tournament_schedule.winner_code = weekly_predictions.winner)""")
 
     engine.execute(stmtFalse)
     engine.execute(stmtTrue)
