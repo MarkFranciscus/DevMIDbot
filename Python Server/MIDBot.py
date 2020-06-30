@@ -77,16 +77,18 @@ async def pickem(ctx, *args):
     global Base, engine
     username = str(ctx.message.author)
     serverid = ctx.message.guild.id
-    # region = args[0]
+    region = args[0]
     region_result = None
     session = Session(engine)
-
+    Tournaments = Base.classes.tournaments
+    Pickems = Base.classes.pickems
+    Leagues = Base.classes.leagues
     # Format pickem table
     if len(args) == 1:
         region = args[0].lower()
-        Tournaments = Base.classes.tournaments
-        Pickems = Base.classes.pickems
-        Leagues = Base.classes.leagues
+        # Tournaments = Base.classes.tournaments
+        # Pickems = Base.classes.pickems
+        # Leagues = Base.classes.leagues
 
         # SQL to get split id for given region
         region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
@@ -152,17 +154,18 @@ async def pickem(ctx, *args):
         # if args[0].lower() not in regions:
         #     msg = "Please choose a valid region"
 
-        region_result = session.query(Tournaments.tournamentid).join(Leagues).filter(
-            and_(Tournaments.iscurrent, Leagues.slug.like(region))).all()
+        # SQL to get split id for given region
+        tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
+            and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
 
-        Tournaments = Base.classes.splits
-        Pickems = Base.classes.pickems
+        # Tournaments = Base.classes.Tournaments
+        # Pickems = Base.classes.pickems
 
-        region_result = session.query(Tournaments.splitid).filter(
-            and_(Tournaments.iscurrent, Tournaments.region.like(region))).all()
+        # region_result = session.query(Tournaments.tournamentid).filter(
+        #     and_(Tournaments.iscurrent, Tournaments.region.like(region))).all()
 
-        for row in region_result:
-            tournamentID = row.splitid
+        # for row in region_result:
+        #     tournamentID = row.splitid
 
         teams = lolesports.getCodes(tournamentID)
         picks = args[1:]
