@@ -386,7 +386,7 @@ async def predict(ctx, *args):
         last_row = {"team1code": "Total", "team2code": "", "winner": "", "winner_code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
         prediction_result = prediction_result[["team1code", "team2code", "winner", "winner_code", "correct"]]
         prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
-        print(prediction_result)
+        # print(prediction_result)
         prediction_result.columns = ["Team", "Team", "Prediction", "Winner", "Correct"]
         msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
     
