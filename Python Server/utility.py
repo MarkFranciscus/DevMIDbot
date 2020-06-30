@@ -770,9 +770,9 @@ def update_predictions(engine):
     engine.execute(stmtTrue)
 
 
-if __name__ == "__main__":
-    Base, engine = connect_database()
-    update_predictions(engine)
+# if __name__ == "__main__":
+#     Base, engine = connect_database()
+#     update_predictions(engine)
     # live_data()
     # database_insert_schedule(engine)
     # database_insert_gamedata(engine, Base)
