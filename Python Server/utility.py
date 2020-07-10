@@ -521,7 +521,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 sleep(10 - loopTime)
             continue
 
-        print(player_data)
+        # print(player_data)
         if player_data.empty:
             continue
 
@@ -770,8 +770,8 @@ def update_predictions(engine, username,serverID):
     engine.execute(stmtTrue)
 
 
-# if __name__ == "__main__":
-#     Base, engine = connect_database()
+if __name__ == "__main__":
+    Base, engine = connect_database()
 #     update_predictions(engine)
     # database_insert_schedule(engine)
     # database_insert_gamedata(engine, Base)
@@ -781,4 +781,4 @@ def update_predictions(engine, username,serverID):
     # print(current_tournaments)
     # database_insert_teams(current_tournaments)
     # database_insert_schedule(engine)
-    # database_insert_gamedata(engine, Base)
+    database_insert_gamedata(engine, Base)

@@ -339,8 +339,8 @@ async def predict(ctx, *args):
     tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
         and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
 
-    blockName = utility.get_block_name(engine, Base, tournamentID)
-    
+    # blockName = utility.get_block_name(engine, Base, tournamentID)
+    blockName = 'Week 4'
     if len(args) > 4:
         teams = lolesports.getCodes(tournamentID)
         picks = args[1:]
@@ -383,10 +383,17 @@ async def predict(ctx, *args):
         prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
             and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
 
+        allPredictionResults = session.query(Weekly_Predictions, Tournament_Schedule).filter(
+            and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Tournament_Schedule.tournamentid == tournamentID)).order_by(Tournament_Schedule.start_ts)
+
         prediction_result = pd.read_sql(prediction_result.statement, engine)
         prediction_result["correct"] = prediction_result["winner"] == prediction_result["winner_code"]
+
+        allPredictionResults = pd.read_sql(allPredictionResults.statement, engine)
+        allPredictionResults["correct"] = allPredictionResults["winner"] == allPredictionResults["winner_code"]
+        
         # prediction_result[prediction_result["winner"] != prediction_result["winner_code"]] = False
-        last_row = {"team1code": "Total", "team2code": "", "winner": "", "winner_code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "correct": f"""{prediction_result[prediction_result["correct"] == True].shape[0]/prediction_result.shape[0]*100}%"""}
+        last_row = {"team1code": "Weekly Total", "team2code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "winner": "Overall", "winner_code": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]}/{allPredictionResults.shape[0]}""", "correct": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]/allPredictionResults.shape[0]*100}%"""}
         prediction_result = prediction_result[["team1code", "team2code", "winner", "winner_code", "correct"]]
         prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
         # print(prediction_result)
