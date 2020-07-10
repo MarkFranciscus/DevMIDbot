@@ -339,8 +339,8 @@ async def predict(ctx, *args):
     tournamentID = session.query(Tournaments.tournamentid).join(Leagues).filter(
         and_(Tournaments.iscurrent, Leagues.slug.like(region))).first()[0]
 
-    # blockName = utility.get_block_name(engine, Base, tournamentID)
-    blockName = 'Week 4'
+    blockName = utility.get_block_name(engine, Base, tournamentID)
+
     if len(args) > 4:
         teams = lolesports.getCodes(tournamentID)
         picks = args[1:]
