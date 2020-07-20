@@ -233,6 +233,12 @@ def getDetails(gameId, timestamp="", participantIds=""):
     for frame in frames:
         participant_data = frame["participants"]
         for participant in participant_data:
-            participant['timestamp'] = frame['rfc460Timestamp']
+            if '.' not in frame['rfc460Timestamp']:
+                frameTS = datetime.datetime.strptime(
+                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%SZ')
+            else:
+                frameTS = datetime.datetime.strptime(
+                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            participant['timestamp'] = frameTS
         participants = pd.concat([participants, pd.DataFrame().from_dict(json_normalize(participant_data), orient='columns')])
     return participants

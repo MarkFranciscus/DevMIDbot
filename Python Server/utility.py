@@ -778,3 +778,7 @@ def update_predictions(engine, username, serverID):
 
     engine.execute(stmtFalse)
     engine.execute(stmtTrue)
+
+if __name__ == "__main__":
+    Base, engine = connect_database()
+    database_insert_gamedata(engine, Base)
