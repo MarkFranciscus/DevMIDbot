@@ -175,7 +175,6 @@ def database_insert_teams(current_tournaments):
             teams['homeLeague'] = leagueID
     teams.rename(
         columns={'id': 'teamid', 'homeLeague': 'leagueid'}, inplace=True)
-    print(teams)
     teams = teams[teams['slug'] != 'tbd']
     teams.to_sql("teams", engine, if_exists='append',
                  index=False, method='multi')
@@ -334,18 +333,21 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
     redFirstBlood = False
     state = "unstarted"
     session = Session(engine)
-    player_columns = ['gameid', 'participantId', 'frame_ts', 'kills', 'deaths',
-                      'assists', 'creepScore', 'fantasy_score', 'summoner_name', 'role']
+    player_columns = ['gameid', 'participantId', 'timestamp', 'kills', 'deaths',
+                      'assists', 'creepScore', 'fantasy_score', 'summoner_name', 'role', 'level', 'totalGoldEarned', 'creepScore', 'killParticipation',
+                      'championDamageShare', 'wardsPlaced', 'wardsDestroyed', 'attackDamage',
+                      'abilityPower', 'criticalChance', 'attackSpeed', 'lifeSteal', 'armor',
+                      'magicResistance', 'tenacity', 'items', 'abilities']
     map_columns = {'gameid': 'gameid', 'participantId': 'participantid',
-                   'frame_ts': 'frame_ts', 'kills': 'kills', 'deaths': 'deaths',
-                               'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
+                   'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
+                   'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
                    'summoner_name': 'summoner_name', 'role': 'role'}
 
     team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
                     'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
 
     print(f"Starting game {gameID}")
-    while state != "finished":
+    while state != "completed":
 
         start_time = time.time()
         player_data = pd.DataFrame()
@@ -366,6 +368,10 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 sleep(10 - loopTime)
             continue
 
+        try:
+            participants_details = utility.getDetails(gameID, timestamp)
+        except Exception as error:
+            continue
         # If there's only two frames then they will be redundant frames ¯\_(ツ)_/¯
         if (len(frames) < 2):
             if live_data:
@@ -464,7 +470,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 Tournament_Schedule = Base.classes.tournament_schedule
                 game = session.query(Tournament_Schedule).filter(
                     Tournament_Schedule.gameid == gameID).first()
-                game.state = 'finished '
+                game.state = 'completed'
 
                 if blueWin:
                     blueTeam['win'] = True
@@ -524,7 +530,8 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
         # print(player_data)
         if player_data.empty:
             continue
-
+        player_data.merge(participants_details, on=[
+                          'timestamp', 'participantId'])
         player_data[['code', 'summoner_name']] = player_data['summonerName'].str.split(
             ' ', 1, expand=True)
         player_data = player_data[player_columns]
@@ -744,7 +751,7 @@ def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, 
         player.update(killTracker[participantID])
         player['fantasy_score'] = fantasy_player_scoring(player)
         player['gameid'] = gameID
-        player['frame_ts'] = frameTS
+        player['timestamp'] = frameTS
         killTracker[participantID]['prevKills'] = player['kills']
     return players, killTracker
 
@@ -757,7 +764,8 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
 
     engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
 
-def update_predictions(engine, username,serverID):
+
+def update_predictions(engine, username, serverID):
     stmtFalse = text(f"""UPDATE weekly_predictions SET correct=false WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
                     FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
                     WHERE tournament_schedule.winner_code != weekly_predictions.winner) and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
@@ -772,13 +780,4 @@ def update_predictions(engine, username,serverID):
 
 if __name__ == "__main__":
     Base, engine = connect_database()
-#     update_predictions(engine)
-    # database_insert_schedule(engine)
-    # database_insert_gamedata(engine, Base)
-    # leagues = database_insert_leagues(engine)
-    # tournaments = database_insert_tournaments(leagues, engine)
-    # current_tournaments = tournaments[tournaments['iscurrent'] == True]
-    # print(current_tournaments)
-    # database_insert_teams(current_tournaments)
-    # database_insert_schedule(engine)
-    database_insert_gamedata(engine, Base)
+    connect_database()

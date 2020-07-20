@@ -223,8 +223,8 @@ def format_standing_list(standings):
     return [temp[i] for i in range(1, 11)]
 
 
-def getDetails(gameId, starting_time="", participantIds=""):
-    params = {'startingTime': starting_time,
+def getDetails(gameId, timestamp="", participantIds=""):
+    params = {'startingTime': timestamp,
               'participantIds': participantIds}
     r = requests.get("https://feed.lolesports.com/livestats/v1/details/{}".format(gameId), params=params)
     rawData = json.loads(r.text)
@@ -235,14 +235,4 @@ def getDetails(gameId, starting_time="", participantIds=""):
         for participant in participant_data:
             participant['timestamp'] = frame['rfc460Timestamp']
         participants = pd.concat([participants, pd.DataFrame().from_dict(json_normalize(participant_data), orient='columns')])
-        # participants['timestamp'] = frame['rfc460Timestamp']
-        # print(participants)
-        # print(frame['rfc460Timestamp'])
     return participants
-
-# if __name__ == "__main__":
-    # slugs = getSlugs(tournamentId=103540419468532110)
-    # date_time_str = '2020-02-01 19:00:00.0'
-    
-    
-    # data.to_csv('game2.csv')
