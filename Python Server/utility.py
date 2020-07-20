@@ -315,7 +315,7 @@ def database_insert_gamedata(engine, Base):
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.datetime.now()
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
-                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "completed", Tournament_Schedule.tournamentid == 104174992692075107, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 104174992692075107, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
 
     for row in gameid_result:
         print(row)
@@ -334,20 +334,26 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
     state = "unstarted"
     session = Session(engine)
     player_columns = ['gameid', 'participantId', 'timestamp', 'kills', 'deaths',
-                      'assists', 'creepScore', 'fantasy_score', 'summoner_name', 'role', 'level', 'totalGoldEarned', 'creepScore', 'killParticipation',
-                      'championDamageShare', 'wardsPlaced', 'wardsDestroyed', 'attackDamage',
-                      'abilityPower', 'criticalChance', 'attackSpeed', 'lifeSteal', 'armor',
-                      'magicResistance', 'tenacity', 'items', 'abilities']
+                      'assists', 'creepScore', 'fantasy_score', 'summoner_name', 'role', 'level', 
+                      'totalGoldEarned', 'killParticipation', 'championDamageShare',
+                      'wardsPlaced', 'wardsDestroyed', 'attackDamage', 'abilityPower', 
+                      'criticalChance', 'attackSpeed', 'lifeSteal', 'armor', 'magicResistance', 
+                      'tenacity']
     map_columns = {'gameid': 'gameid', 'participantId': 'participantid',
                    'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
                    'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
-                   'summoner_name': 'summoner_name', 'role': 'role'}
+                   'summoner_name': 'summoner_name', 'role': 'role', 'totalGoldEarned': 'total_gold_earned', 
+                   'killParticipation': 'kill_participation', 'championDamageShare': 'champion_damage_share',
+                   'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed', 
+                   'attackDamage': 'attack_damage', 'abilityPower': 'ability_power',
+                   'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal', 
+                   'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity'}
 
     team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
                     'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
 
     print(f"Starting game {gameID}")
-    while state != "completed":
+    while state != "finished":
 
         start_time = time.time()
         player_data = pd.DataFrame()
@@ -472,7 +478,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 Tournament_Schedule = Base.classes.tournament_schedule
                 game = session.query(Tournament_Schedule).filter(
                     Tournament_Schedule.gameid == gameID).first()
-                game.state = 'completed'
+                game.state = 'finished'
 
                 if blueWin:
                     blueTeam['win'] = True
@@ -532,11 +538,17 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
         # print(player_data)
         if player_data.empty:
             continue
-        player_data.merge(participants_details, on=[
-                          'timestamp', 'participantId'])
+
+        # participants_details.to_csv('participant.csv', index=False)
+
+        player_data = player_data.merge(participants_details, on=[
+                          'timestamp', 'participantId', 'kills', 'deaths', 'assists', 'creepScore', 'level'])
         player_data[['code', 'summoner_name']] = player_data['summonerName'].str.split(
             ' ', 1, expand=True)
         player_data = player_data[player_columns]
+        player_data.drop_duplicates(inplace=True)
+        team_data.drop_duplicates(inplace=True)
+        # player_data.to_csv('player_data.csv', index=False)
         player_data.rename(columns=map_columns, inplace=True)
 
         player_data.to_sql("player_gamedata", engine,
