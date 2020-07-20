@@ -361,7 +361,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
             blueTeamID, blueMetadata, redTeamID, redMetadata, frames, matchid = lolesports.getWindow(
                 gameID, starting_time=timestamp)
         except Exception as error:
-            # print(f"{error} - {timestamp} - {gameid}")
+            # print(f"{error} - {timestamp} - {gameID}")
             if live_data:
                 loopTime = time.time() - start_time
                 print("Game hasn't started yet")
@@ -369,9 +369,11 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
             continue
 
         try:
-            participants_details = utility.getDetails(gameID, timestamp)
+            participants_details = lolesports.getDetails(gameID, timestamp)
         except Exception as error:
+            print(error)
             continue
+
         # If there's only two frames then they will be redundant frames ¯\_(ツ)_/¯
         if (len(frames) < 2):
             if live_data:
@@ -776,8 +778,3 @@ def update_predictions(engine, username, serverID):
 
     engine.execute(stmtFalse)
     engine.execute(stmtTrue)
-
-
-if __name__ == "__main__":
-    Base, engine = connect_database()
-    connect_database()
