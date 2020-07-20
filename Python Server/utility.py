@@ -547,8 +547,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
             ' ', 1, expand=True)
         player_data = player_data[player_columns]
         player_data.drop_duplicates(subset=["summoner_name", "gameid", "timestamp"], inplace=True)
-        team_data.drop_duplicates(subset=["gameid", "code", "timestamp"], inplace=True)
-        # player_data.to_csv('player_data.csv', index=False)
+        team_data.drop_duplicates(subset=["gameid", "teamid", "timestamp"], inplace=True)
         player_data.rename(columns=map_columns, inplace=True)
 
         player_data.to_sql("player_gamedata", engine,
