@@ -404,27 +404,27 @@ async def predict(ctx, *args):
         msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
     
     elif len(args) == 2:
-        blockName = f"Week {args[1]}"
-        prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
-            and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
+        if args[1].isnumeric():
+            blockName = f"Week {args[1]}"
+            prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
+                and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname == blockName)).order_by(Tournament_Schedule.start_ts)
 
-        allPredictionResults = session.query(Weekly_Predictions, Tournament_Schedule).filter(
-            and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Tournament_Schedule.tournamentid == tournamentID)).order_by(Tournament_Schedule.start_ts)
+            allPredictionResults = session.query(Weekly_Predictions, Tournament_Schedule).filter(
+                and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Tournament_Schedule.tournamentid == tournamentID)).order_by(Tournament_Schedule.start_ts)
 
-        prediction_result = pd.read_sql(prediction_result.statement, engine)
-        prediction_result["correct"] = prediction_result["winner"] == prediction_result["winner_code"]
+            prediction_result = pd.read_sql(prediction_result.statement, engine)
+            prediction_result["correct"] = prediction_result["winner"] == prediction_result["winner_code"]
 
-        allPredictionResults = pd.read_sql(allPredictionResults.statement, engine)
-        allPredictionResults["correct"] = allPredictionResults["winner"] == allPredictionResults["winner_code"]
-        
-        # prediction_result[prediction_result["winner"] != prediction_result["winner_code"]] = False
-        last_row = {"team1code": "Weekly Total", "team2code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "winner": "Overall", "winner_code": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]}/{allPredictionResults.shape[0]}""", "correct": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]/allPredictionResults.shape[0]*100}%"""}
-        prediction_result = prediction_result[["team1code", "team2code", "winner", "winner_code", "correct"]]
-        prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
-        # print(prediction_result)
-        prediction_result.columns = ["Team", "Team", "Prediction", "Winner", "Correct"]
-        msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
-
+            allPredictionResults = pd.read_sql(allPredictionResults.statement, engine)
+            allPredictionResults["correct"] = allPredictionResults["winner"] == allPredictionResults["winner_code"]
+            
+            # prediction_result[prediction_result["winner"] != prediction_result["winner_code"]] = False
+            last_row = {"team1code": "Weekly Total", "team2code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "winner": "Overall", "winner_code": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]}/{allPredictionResults.shape[0]}""", "correct": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]/allPredictionResults.shape[0]*100}%"""}
+            prediction_result = prediction_result[["team1code", "team2code", "winner", "winner_code", "correct"]]
+            prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
+            # print(prediction_result)
+            prediction_result.columns = ["Team", "Team", "Prediction", "Winner", "Correct"]
+            msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
     elif len(args) == 3:
         blockNames = [f"Week {i}" for i in range(int(args[1]), int(args[2]) + 1)]
         
@@ -460,6 +460,11 @@ async def count(num, ctx):
         await sleep(1 - MIDBot.latency)
         end_time = time.time()
 
+@MIDBot.command()
+async def update(ctx):
+    utility.update_winners(Base, engine)
+    utility.update_predictions(engine)
+    await ctx.channel.send("Updated")
 
 @MIDBot.command()
 async def commands(ctx):

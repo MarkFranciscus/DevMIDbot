@@ -221,7 +221,6 @@ def database_insert_players(engine):
 def database_insert_schedule(engine):
     leagues = lolesports.getLeagues()
     schedule = pd.DataFrame()
-    leagues = {"id": [98767991299243165]}
     for leagueID in leagues['id']:
         page_token = ""
         while page_token is not None:
@@ -232,7 +231,6 @@ def database_insert_schedule(engine):
             dt = dt.replace(tzinfo=datetime.timezone.utc)
             p = (tournaments['startdate'] <= dt) & (dt <= tournaments['enddate'])
             tournaments['iscurrent'] = np.where(p, True, False)
-            tournaments = tournaments[tournaments['iscurrent'] == True]
 
             for event in events:
                 startTime = dateutil.parser.isoparse(event['startTime'])
@@ -783,7 +781,35 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
     engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
 
 
-def update_predictions(engine, username, serverID):
-    update_weekly_predictions = text(f"""update weekly_predictions wp set correct=(winner_code = winner) from tournament_schedule ts where wp.gameid=ts.gameid and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
+def update_predictions(engine):
+    update_weekly_predictions = text(f"""update weekly_predictions wp set correct=(winner_code = winner) from tournament_schedule ts where wp.gameid=ts.gameid""")
 
     engine.execute(update_weekly_predictions)
+
+def update_winners(Base, engine):
+    Tournaments = Base.classes.tournaments
+    Tournament_Schedule = Base.classes.tournament_schedule
+
+    session = Session(engine)
+    current_tournaments = session.query(Tournaments.leagueid, Tournaments.tournamentid, Tournaments.startdate, Tournaments.enddate).filter(Tournaments.iscurrent).filter(Tournaments.leagueid == 98767991299243165)
+
+    for tournament in current_tournaments:
+        page_token = ""
+        while page_token is not None:
+            events, pages = lolesports.getSchedule(leagueId=tournament.leagueid, include_pagetoken=True, pageToken=page_token)
+            page_token = pages["older"]
+            for event in events:
+                
+                if event['type'] != "match":
+                    continue
+                
+                
+                if event['state'] != 'unstarted':
+                    game = session.query(Tournament_Schedule).filter(Tournament_Schedule.matchid == event["match"]["id"]).first()
+                    if game is None:
+                        continue
+                    if event['match']["teams"][0]["result"]["outcome"] == "win":
+                        game.winner_code = event['match']["teams"][0]["code"]
+                    elif event['match']["teams"][1]["result"]["outcome"] == "win":
+                        game.winner_code = event['match']["teams"][0]["code"]
+                    session.commit() 
