@@ -1,16 +1,19 @@
 import asyncio
 import time
 from asyncio import sleep
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import sqlalchemy
+import tabulate
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord.ext.commands import Bot
+from sqlalchemy import FLOAT, Integer, cast
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import and_, text, func
-import tabulate
-from datetime import datetime
+from sqlalchemy.sql import and_, func, text
+
 import lolesports
 import utility
 
@@ -424,24 +427,28 @@ async def predict(ctx, *args):
 
     elif len(args) == 3:
         blockNames = [f"Week {i}" for i in range(int(args[1]), int(args[2]) + 1)]
-        prediction_result = session.query(Weekly_Predictions, Tournament_Schedule).filter(
-            and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname.in_(blockNames))).order_by(Tournament_Schedule.start_ts)
-        print(prediction_result.statement)
-        allPredictionResults = session.query(Weekly_Predictions, Tournament_Schedule).filter(
-            and_(Weekly_Predictions.gameid == Tournament_Schedule.gameid, Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Tournament_Schedule.tournamentid == tournamentID)).order_by(Tournament_Schedule.start_ts)
+        
+        prediction_result = session.query(
+            Weekly_Predictions.blockname.label("Week"), 
+            func.concat(func.sum(cast(Weekly_Predictions.correct, Integer)), "/", func.count()).label("Count"), 
+            func.concat(cast(func.sum(cast(Weekly_Predictions.correct, Integer)), FLOAT)/cast(func.count(), FLOAT)*100, "%").label("Percentage")
+        ).filter(and_(Weekly_Predictions.serverid == serverID, Weekly_Predictions.discordname == username, Weekly_Predictions.blockname.in_(blockNames))).group_by(Weekly_Predictions.blockname).order_by(Weekly_Predictions.blockname)
+
 
         prediction_result = pd.read_sql(prediction_result.statement, engine)
-        prediction_result["correct"] = prediction_result["winner"] == prediction_result["winner_code"]
 
-        allPredictionResults = pd.read_sql(allPredictionResults.statement, engine)
-        allPredictionResults["correct"] = allPredictionResults["winner"] == allPredictionResults["winner_code"]
-        
-        # prediction_result[prediction_result["winner"] != prediction_result["winner_code"]] = False
-        last_row = {"team1code": "Weekly Total", "team2code": f"""{prediction_result[prediction_result["correct"] == True].shape[0]}/{prediction_result.shape[0]}""", "winner": "Overall", "winner_code": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]}/{allPredictionResults.shape[0]}""", "correct": f"""{allPredictionResults[allPredictionResults["correct"] == True].shape[0]/allPredictionResults.shape[0]*100}%"""}
-        prediction_result = prediction_result[["team1code", "team2code", "winner", "winner_code", "correct"]]
+        count_split = prediction_result["Count"].str.split("/", expand=True)
+        count_split[0] = pd.to_numeric(count_split[0])
+        count_split[1] = pd.to_numeric(count_split[1])
+        correct = count_split[0].sum()
+        total = count_split[1].sum()
+
+        percentage_split = prediction_result["Percentage"].str.split("%", expand=True)
+        percentage_split[0] = pd.to_numeric(percentage_split[0])
+
+        last_row = {"Week": "Total", "Count": f"""{correct}/{total}""", "Percentage":round(percentage_split[0].mean(), 1)}
         prediction_result = pd.concat([prediction_result, pd.DataFrame(last_row, index=[0])], ignore_index=True)
-        # print(prediction_result)
-        prediction_result.columns = ["Team", "Team", "Prediction", "Winner", "Correct"]
+
         msg = f"```{tabulate.tabulate(prediction_result, headers='keys', tablefmt='fancy_grid', showindex=False)}```"
     await ctx.channel.send(msg)
 

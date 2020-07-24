@@ -221,47 +221,63 @@ def database_insert_players(engine):
 def database_insert_schedule(engine):
     leagues = lolesports.getLeagues()
     schedule = pd.DataFrame()
-
+    leagues = {"id": [98767991299243165]}
     for leagueID in leagues['id']:
-        events = lolesports.getSchedule(leagueId=leagueID)
-        tournaments = lolesports.getTournamentsForLeague(leagueID)
-        dt = datetime.datetime.utcnow()
-        dt = dt.replace(tzinfo=datetime.timezone.utc)
-        p = (tournaments['startdate'] <= dt) & (dt <= tournaments['enddate'])
-        tournaments['iscurrent'] = np.where(p, True, False)
-        tournaments = tournaments[tournaments['iscurrent'] == True]
+        page_token = ""
+        while page_token is not None:
+            events, pages = lolesports.getSchedule(leagueId=leagueID, include_pagetoken=True, pageToken=page_token)
+            page_token = pages['older']
+            tournaments = lolesports.getTournamentsForLeague(leagueID)
+            dt = datetime.datetime.utcnow()
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+            p = (tournaments['startdate'] <= dt) & (dt <= tournaments['enddate'])
+            tournaments['iscurrent'] = np.where(p, True, False)
+            tournaments = tournaments[tournaments['iscurrent'] == True]
 
-        for event in events:
-            startTime = dateutil.parser.isoparse(event['startTime'])
-            p = (tournaments['startdate'] <= startTime) & (
-                startTime < tournaments['enddate'])
-            if event['type'] != "match":
-                continue
+            for event in events:
+                startTime = dateutil.parser.isoparse(event['startTime'])
+                p = (tournaments['startdate'] <= startTime) & (
+                    startTime < tournaments['enddate'])
+                if event['type'] != "match":
+                    continue
+                d = {}
+                gameid = lolesports.getEventDetails(event['match']['id'])[
+                    'match']['games'][0]["id"]
+                d['gameID'] = [int(gameid)]
+                # print(type(gameid))
+                startTime = dateutil.parser.isoparse(event['startTime'])
+                d['start_ts'] = [startTime]
+                d['team1code'] = [str(event['match']['teams'][0]['code'])]
+                d['team2code'] = [str(event['match']['teams'][1]['code'])]
+                d['state'] = [str(event['state'])]
+                d['blockName'] = [str(event['blockName'])]
+                d['matchid'] = [int(event['match']['id'])]
 
-            d = {}
-            gameid = lolesports.getEventDetails(event['match']['id'])[
-                'match']['games'][0]["id"]
-            d['gameID'] = [gameid]
-            startTime = dateutil.parser.isoparse(event['startTime'])
-            d['start_ts'] = [startTime]
-            d['team1code'] = [event['match']['teams'][0]['code']]
-            d['team2code'] = [event['match']['teams'][1]['code']]
-            d['state'] = [event['state']]
-            d['blockName'] = [event['blockName']]
-            p = (tournaments['startdate'] <= startTime) & (
-                startTime < tournaments['enddate'])
+                if event['state'] != 'unstarted':
+                    if event['match']["teams"][0]["result"]["outcome"] == "win":
+                        d['winner_code'] = [event['match']["teams"][0]["code"]]
+                    elif event['match']["teams"][1]["result"]["outcome"] == "win":
+                        d['winner_code'] = [event['match']["teams"][1]["code"]]
+                else:
+                    d['winner_code'] = None
 
-            if len(tournaments.loc[p, 'id'].index) == 0:
-                continue
+                p = (tournaments['startdate'] <= startTime) & (
+                    startTime < tournaments['enddate'])
 
-            d['tournamentid'] = [tournaments.loc[p, 'id'].iloc[0]]
-            if d['tournamentid'] in [102147203732523011, 103540419468532110]:
-                continue
-            # print(gameid)
-            temp = pd.DataFrame().from_dict(d)
-            schedule = pd.concat([schedule, temp], ignore_index=True)
+                if len(tournaments.loc[p, 'id'].index) == 0:
+                    continue
+
+                d['tournamentid'] = [tournaments.loc[p, 'id'].iloc[0]]
+                if d['tournamentid'] in [102147203732523011, 103540419468532110]:
+                    continue
+                temp = pd.DataFrame().from_dict(d)
+                schedule = pd.concat([schedule, temp], ignore_index=True)
 
     schedule.columns = map(str.lower, schedule.columns)
+    print(schedule)
+    # print(schedule)
+
+    # schedule.to_csv("schedule.csv", index=False)
     schedule.to_sql("tournament_schedule", engine,
                     if_exists='append', index=False, method='multi')
     return schedule
@@ -373,7 +389,6 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 print("Game hasn't started yet")
                 sleep(10 - loopTime)
             continue
-
         try:
             participants_details = lolesports.getDetails(gameID, timestamp)
         except Exception as error:
@@ -430,7 +445,6 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 redPrevKills = 0
 
                 for player in bluePlayers:
-                    # print(player)
                     killTracker[player['participantId']] = {
                         'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
 
@@ -459,7 +473,7 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 events = lolesports.getSchedule(leagueid)
                 for event in events:
                     match = event["match"]
-
+                    print(f"""{match["id"]} - {matchid}""")
                     if match["id"] == matchid:
                         if match["teams"][0]["result"]["outcome"] == "win":
                             if blueCode == match["teams"][0]["code"]:
@@ -498,12 +512,6 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                     f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
                 session.commit()
 
-            # Checks if frame is redundant
-            if frameTS in timestamps:
-                continue
-            else:
-                timestamps.append(frameTS)
-
             bluePlayers = pd.DataFrame().from_dict(json_normalize(bluePlayers))
             redPlayers = pd.DataFrame().from_dict(json_normalize(redPlayers))
 
@@ -535,11 +543,8 @@ def parse_gamedate(engine, Base, leagueid, tournamentid, gameID, start_ts, live_
                 sleep(10 - loopTime)
             continue
 
-        # print(player_data)
         if player_data.empty:
             continue
-
-        # participants_details.to_csv('participant.csv', index=False)
 
         player_data = player_data.merge(participants_details, on=[
                           'timestamp', 'participantId', 'kills', 'deaths', 'assists', 'creepScore', 'level'])
@@ -779,17 +784,6 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
 
 
 def update_predictions(engine, username, serverID):
-    stmtFalse = text(f"""UPDATE weekly_predictions SET correct=false WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
-                    FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
-                    WHERE tournament_schedule.winner_code != weekly_predictions.winner) and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
+    update_weekly_predictions = text(f"""update weekly_predictions wp set correct=(winner_code = winner) from tournament_schedule ts where wp.gameid=ts.gameid and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
 
-    stmtTrue = text(f"""UPDATE weekly_predictions SET correct=true WHERE weekly_predictions.gameid in (SELECT tournament_schedule.gameid AS tournament_schedule_gameid 
-                    FROM tournament_schedule JOIN weekly_predictions ON tournament_schedule.gameid = weekly_predictions.gameid
-                    WHERE tournament_schedule.winner_code = weekly_predictions.winner) and weekly_predictions.discordname='{username}' and weekly_predictions.serverid={serverID}""")
-
-    engine.execute(stmtFalse)
-    engine.execute(stmtTrue)
-
-if __name__ == "__main__":
-    Base, engine = connect_database()
-    database_insert_gamedata(engine, Base)
+    engine.execute(update_weekly_predictions)
