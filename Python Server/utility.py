@@ -801,15 +801,14 @@ def update_winners(Base, engine):
             for event in events:
                 
                 if event['type'] != "match":
-                    continue
+                    continue                
                 
-                
-                if event['state'] != 'unstarted':
+                if event['state'] == 'completed':
                     game = session.query(Tournament_Schedule).filter(Tournament_Schedule.matchid == event["match"]["id"]).first()
                     if game is None:
                         continue
                     if event['match']["teams"][0]["result"]["outcome"] == "win":
                         game.winner_code = event['match']["teams"][0]["code"]
                     elif event['match']["teams"][1]["result"]["outcome"] == "win":
-                        game.winner_code = event['match']["teams"][0]["code"]
+                        game.winner_code = event['match']["teams"][1]["code"]
                     session.commit() 
