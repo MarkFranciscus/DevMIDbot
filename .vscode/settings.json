@@ -1,4 +1,6 @@
 {
     "python.pythonPath": "C:\\Users\\Mark\\Anaconda3\\envs\\MIDBot\\python.exe",
-    "python.formatting.provider": "autopep8"
+    "python.formatting.provider": "autopep8",
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
 }

@@ -27,7 +27,6 @@ def getLeagues(hl="en-US"):
 
 
 def getSchedule(leagueId, include_pagetoken=False, hl="en-US", pageToken=""):
-    d = {}
     param = {"hl": hl, "leagueId": leagueId, "pageToken": pageToken}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getSchedule",
                      headers=header, params=param)
@@ -51,7 +50,6 @@ def getLive(hl="en-US"):
 
 
 def getTournamentsForLeague(leagueId, hl="en-US"):
-    d = {}
     param = {"hl": hl, "leagueId": leagueId}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getTournamentsForLeague",
                      headers=header, params=param)
@@ -199,7 +197,6 @@ def getWindow(gameId, starting_time=""):
         return blueTeam, blueMetadata, redTeam, redMetadata, frames, matchid
     else:
         raise Exception(f"getWindow giving status code {r.status_code}")
-        pass
     
 def navItems():
     pass
