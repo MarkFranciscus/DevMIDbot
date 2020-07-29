@@ -29,7 +29,7 @@ Base = None
 
 
 def config(filename='config.ini', section='database'):
-    """reads config file, returns the given section
+    """Reads config file, returns the given section
 
     Args:
         filename (str, optional): name of config file. Defaults to 'config.ini'.
@@ -345,6 +345,7 @@ def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
     start_ts += datetime.timedelta(hours=4)
     date_time_obj = round_time(start_ts)
     kill_tracker = {}
+    timestamps = []
     game_start_flag = True
     blue_first_blood = False
     red_first_blood = False
@@ -401,10 +402,11 @@ def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
                     frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
 
             # Checks if game is paused
-            if state == 'paused':
+            if state == 'paused' or frameTS in timestamps:
                 live_data_check(start_time, live_data)
                 continue
-
+            timestamps.append(frameTS)
+            
             participants = pd.DataFrame()
             teams = pd.DataFrame()
 
@@ -618,26 +620,6 @@ def get_block_name(engine, Base, tournamentid):
                                                                       Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
     return blockResult[0]
 
-
-# def get_live_data():
-#     Base, engine = connect_database()
-#     print(f"Live data at {datetime.datetime.now()}")
-#     events = lolesports.getLive()
-#     for event in events:
-#         if event['type'] == "match" and int(event['league']['id']) == 98767991299243165:
-#             leagueid = event['league']['id']
-#             matchid = event['id']
-#             session = Session(engine)
-#             Tournaments = Base.classes.tournaments
-#             tournamentid = session.query(Tournaments.tournamentid).filter(
-#                 Tournaments.leagueid == leagueid, Tournaments.iscurrent == True).first()[0]
-#             event_details = lolesports.getEventDetails(matchid)
-#             gameid = event_details['match']['games'][0]['id']
-#             start_ts = event["startTime"]
-#             start_ts_datetime = datetime.datetime.now() - datetime.timedelta(seconds=30)
-#             parse_gamedate(engine, Base, leagueid, tournamentid,
-#                            gameid, start_ts_datetime, live_data=True)
-
 # Timeout check not working
 
 
@@ -788,6 +770,7 @@ def live_data_check(start_time, live_data=False):
         loopTime = time.time() - start_time
         print("Game is paused")
         sleep(10 - loopTime)
+
 
 def player_data_processing(player_data, participants_details):
     player_columns = ['gameid', 'participantId', 'timestamp', 'kills', 'deaths',
