@@ -29,7 +29,7 @@ import lolesports
 conn = None
 Base = None
 
-logging.basicConfig(level=logging.INFO, filename='midbot.log', filemode='w', format='%(name)s - %(process)d - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, filename='midbot.log', filemode='w', format='%(name)s - %(process)d - %(levelname)s - %(message)s')
 
 def config(filename='config.ini', section='database'):
     """Reads config file, returns the given section
@@ -86,12 +86,15 @@ def connect_database():
     url = URL(**params)
     engine = create_engine(url, client_encoding='utf8', use_batch_mode=True)
     conn = engine.connect()
-    conn.execute("SET search_path TO public")
+    conn.execute("SET search_path TO midbot")
 
+    metadata = MetaData()
+    metadata.reflect(engine, schema='midbot')
     # Map database relations
-    Base = automap_base()
-    Base.prepare(engine, reflect=True)
-
+    Base = automap_base(metadata=metadata)
+    # Base.prepare(engine, reflect=True)
+    Base.prepare()
+    logging.debug(f"{list(Base.classes)}")
     logging.info("Connected")
     return Base, engine
 
