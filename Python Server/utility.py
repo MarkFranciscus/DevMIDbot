@@ -381,7 +381,7 @@ def database_insert_gamedata(engine, Base):
 
 
 def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_data=False):
-    start_ts += datetime.timedelta(hours=4, minutes=20)
+    start_ts += datetime.timedelta(hours=4)
     date_time_obj = round_time(start_ts)
     kill_tracker = {}
     timestamps = []
