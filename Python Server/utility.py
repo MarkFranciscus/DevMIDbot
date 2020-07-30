@@ -203,7 +203,7 @@ def database_insert_players(current_tournaments, engine):
     players_dataframe.rename(columns={'id': 'playerid'}, inplace=True)
     players_dataframe.columns = map(str.lower, players_dataframe.columns)
     players_dataframe.to_sql(
-        "players", engine, if_exists='append', index=False, method='multi')
+        "players", engine, if_exists='append', index=False, method='multi', schema='midbot')
     return players_dataframe
 
 
@@ -224,7 +224,7 @@ def database_insert_teams(current_tournaments, engine):
         columns={'id': 'teamid', 'homeLeague': 'leagueid'}, inplace=True)
     teams = teams[teams['slug'] != 'tbd']
     teams.to_sql("teams", engine, if_exists='append',
-                 index=False, method='multi')
+                 index=False, method='multi', schema='midbot')
     return teams
 
 
@@ -241,7 +241,7 @@ def database_insert_tournaments(leagues, engine=None):
         tournaments['iscurrent'] = np.where(p, True, False)
         all_tournaments = pd.concat(
             [all_tournaments, tournaments], ignore_index=True)
-    # all_tournaments.to_sql("tournaments", engine, if_exists='append', index=False, method='multi')
+    # all_tournaments.to_sql("tournaments", engine, if_exists='append', index=False, method='multi', schema='midbot')
     return all_tournaments
 
 
@@ -313,7 +313,7 @@ def database_insert_schedule(engine):
 
     # schedule.to_csv("schedule.csv", index=False)
     schedule.to_sql("tournament_schedule", engine,
-                    if_exists='append', index=False, method='multi')
+                    if_exists='append', index=False, method='multi', schema='midbot')
     return schedule
 
 
@@ -369,6 +369,7 @@ def database_insert_gamedata(engine, Base):
                                       Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
                                           Tournament_Schedule.tournamentid == 104174992692075107, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
 
+    # print(len(gameid_result))
     threads= []
     with ThreadPoolExecutor(max_workers=20) as executor:
         for row in gameid_result:
@@ -552,10 +553,11 @@ def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
         team_data.drop_duplicates(
             subset=["gameid", "teamid", "frame_ts"], inplace=True)
         
+        logging.debug("Inserting")
         player_data.to_sql("player_gamedata", engine,
-                           if_exists='append', index=False, method='multi')
+                           if_exists='append', index=False, method='multi', schema='midbot')
         team_data.to_sql("team_gamedata", engine,
-                         if_exists='append', index=False, method='multi')
+                         if_exists='append', index=False, method='multi', schema='midbot')
 
         live_data_check(start_time, live_data)
 
@@ -838,3 +840,7 @@ def player_data_processing(player_data, participants_details):
         subset=["summoner_name", "gameid", "timestamp"], inplace=True)
     player_data.rename(columns=map_columns, inplace=True)
     return player_data
+
+if __name__ == "__main__":
+    Base, engine = connect_database()
+    database_insert_gamedata(engine, Base)
