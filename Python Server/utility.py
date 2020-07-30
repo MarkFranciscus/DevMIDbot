@@ -8,6 +8,8 @@ import time
 from configparser import ConfigParser
 from difflib import SequenceMatcher
 from time import sleep
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import dateutil.parser
 import numpy as np
@@ -27,6 +29,7 @@ import lolesports
 conn = None
 Base = None
 
+logging.basicConfig(level=logging.INFO, filename='midbot.log', filemode='w', format='%(name)s - %(process)d - %(levelname)s - %(message)s')
 
 def config(filename='config.ini', section='database'):
     """Reads config file, returns the given section
@@ -39,9 +42,10 @@ def config(filename='config.ini', section='database'):
         Exception: Section not found in config file
 
     Returns:
-        dictionary: values found in config file 
+        (dictionary): values found in config file 
     """
     # create a parser
+    logging.info("Reading config file")
     parser = ConfigParser()
 
     # read config file
@@ -55,14 +59,20 @@ def config(filename='config.ini', section='database'):
         for param in params:
             result[param[0]] = param[1]
     else:
+        logging.error(f"No section {section} in {filename}")
         raise Exception(
-            'Section {0} not found in the {1} file'.format(section, filename))
-
+            f"Section {section} not found in the {filename} file")
+    logging.info(f"Loaded {section} from {filename}")
     return result
 
 
 def connect_database():
-    """ Connect to the PostgreSQL database server """
+    """Connect to the PostgreSQL database server
+
+    Returns:
+        (Engine): The database engine instance used to connect to DBAPI
+        (Base): Holds the database relations
+    """
     global conn
     global Base
 
@@ -70,31 +80,50 @@ def connect_database():
     params = config()
 
     # connect to the PostgreSQL server
-    print('Connecting to the PostgreSQL database...')
-    # print(params)
+    logging.info(f"Connecting to the PostgreSQL database")
+    
+    # Create URL to connect to database, connect, and set default scheme to public
     url = URL(**params)
     engine = create_engine(url, client_encoding='utf8', use_batch_mode=True)
     conn = engine.connect()
     conn.execute("SET search_path TO public")
 
+    # Map database relations
     Base = automap_base()
     Base.prepare(engine, reflect=True)
 
+    logging.info("Connected")
     return Base, engine
 
 
-def similar(a, b):
-    return SequenceMatcher(None, a, b).ratio()
+def similar(string_1, string_2):
+    """ Compares how similar 2 strings are
+
+    Args:
+        string_1 (str): The first string to compare
+        string_2 (str): The second string to compare
+
+    Returns:
+        (float): A measure of the strings similarities
+    """
+    return SequenceMatcher(None, string_1, string_2).ratio()
 
 
-def fantasy_player_scoring(playerStats):
+def fantasy_player_scoring(player_stats):
+    """ Calculates the fantasy score for a given player's stats
+
+    Args:
+        player_stats (dictionary): Players stats for a given frame
+
+    Returns:
+        float: final calculation of fantasy score
+    """
     score = 0
-    multipliers = {"kills": 2, "deaths": -0.5,
-                               "assists": 1.5, "creepScore": 0.01}
-    isOver10 = False
+    multipliers = {"kills": 2.0, "deaths": -0.5, "assists": 1.5, "creepScore": 0.01,  "triple": 2, "quadra": 5, "penta": 10}
+    is_over_10 = False
     for stat in multipliers.keys():
-        score += playerStats[stat] * multipliers[stat]
-        if stat in ["kills", "assists"] and playerStats[stat] >= 10 and not isOver10:
+        score += player_stats[stat] * multipliers[stat]
+        if stat in ["kills", "assists"] and player_stats[stat] >= 10 and not is_over_10:
             score += 2
     return score
 
@@ -141,7 +170,7 @@ def init_data(engine):
     """Initializes database with League of Legends eSports API data
 
     Args:
-        engine (Engine): The database engine instance use to connect to DBAPI
+        Engine: The database engine instance used to connect to DBAPI
     """
     # league
     leagues = database_insert_leagues(engine)
@@ -246,7 +275,7 @@ def database_insert_schedule(engine):
                 gameid = lolesports.getEventDetails(event['match']['id'])[
                     'match']['games'][0]["id"]
                 d['gameID'] = [int(gameid)]
-                # print(type(gameid))
+                # logging.info(type(gameid))
                 startTime = dateutil.parser.isoparse(event['startTime'])
                 d['start_ts'] = [startTime]
                 d['team1code'] = [str(event['match']['teams'][0]['code'])]
@@ -276,8 +305,8 @@ def database_insert_schedule(engine):
                 schedule = pd.concat([schedule, temp], ignore_index=True)
 
     schedule.columns = map(str.lower, schedule.columns)
-    print(schedule)
-    # print(schedule)
+    logging.info(schedule)
+    # logging.info(schedule)
 
     # schedule.to_csv("schedule.csv", index=False)
     schedule.to_sql("tournament_schedule", engine,
@@ -333,16 +362,22 @@ def database_insert_gamedata(engine, Base):
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.datetime.now()
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
-                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(Tournament_Schedule.state != "finished", Tournament_Schedule.tournamentid == 104174992692075107, ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(
+                                      Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
+                                          Tournament_Schedule.tournamentid == 104174992692075107, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
 
-    for row in gameid_result:
-        print(row)
-        parse_gamedate(engine, Base, row.leagueid,
-                       row.tournamentid, row.gameid, row.start_ts)
+    threads= []
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for row in gameid_result:
+            threads.append(executor.submit(parse_gamedata, engine, Base, row.leagueid,
+                        row.tournamentid, row.gameid, row.start_ts))
+    
+    for task in as_completed(threads):
+        logging.info(task.result())
 
 
-def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_data=False):
-    start_ts += datetime.timedelta(hours=4)
+def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_data=False):
+    start_ts += datetime.timedelta(hours=4, minutes=20)
     date_time_obj = round_time(start_ts)
     kill_tracker = {}
     timestamps = []
@@ -354,7 +389,7 @@ def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
     team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
                     'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
 
-    print(f"Starting game {gameID}")
+    logging.info(f"Starting game {gameID}")
     while state != "finished":
 
         start_time = time.time()
@@ -369,13 +404,13 @@ def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
             blue_team_ID, blue_metadata, red_team_ID, red_metadata, frames, matchID = lolesports.getWindow(
                 gameID, starting_time=timestamp)
         except Exception as error:
-            # print(f"{error} - {timestamp} - {gameID}")
+            # logging.info(f"{error} - {timestamp} - {gameID}")
             live_data_check(start_time, live_data)
             continue
         try:
             participants_details = lolesports.getDetails(gameID, timestamp)
         except Exception as error:
-            print(error)
+            logging.info(error)
             continue
 
         # If there's only two frames then they will be redundant frames ¯\_(ツ)_/¯
@@ -473,7 +508,7 @@ def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
                     red_team['under_30'] = endTS - \
                         startTS < datetime.timedelta(minutes=30)
                 game.winner_code = winner_code
-                print(
+                logging.info(
                     f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
                 session.commit()
 
@@ -514,10 +549,10 @@ def parse_gamedate(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
         team_data.drop_duplicates(
             subset=["gameid", "teamid", "frame_ts"], inplace=True)
         
-        player_data.to_sql("player_gamedata", engine,
-                           if_exists='append', index=False, method='multi')
-        team_data.to_sql("team_gamedata", engine,
-                         if_exists='append', index=False, method='multi')
+        # player_data.to_sql("player_gamedata", engine,
+        #                    if_exists='append', index=False, method='multi')
+        # team_data.to_sql("team_gamedata", engine,
+        #                  if_exists='append', index=False, method='multi')
 
         live_data_check(start_time, live_data)
 
@@ -609,7 +644,7 @@ def get_fantasy_league_table(engine, Base, serverid, tournamentid=10346243943868
 
         # scoreTables[row[0]] = pd.concat(
         #     [scoreTables[row[0]], sumFrame], ignore_index=True)
-        # print(list(scoreTables[row[0]].columns.values)[::-1])
+        # logging.info(list(scoreTables[row[0]].columns.values)[::-1])
     return scoreTables
 
 
@@ -623,23 +658,15 @@ def get_block_name(engine, Base, tournamentid):
 # Timeout check not working
 
 
-def multikill(player, enemy_players, team_kills, prev_team_kills, currentTS):
+def multikill(participantID, player, enemy_players, team_kills, prev_team_kills, currentTS):
     all_enemies_dead = True
-
-    doubleTripleQuadraKill = currentTS - \
-        player["killTS"] <= datetime.timedelta(
-            seconds=10) and player["killCount"] < 4
+    doubleTripleQuadraKill = currentTS - player["killTS"] <= datetime.timedelta(
+                                seconds=10) and player["killCount"] < 4
     pentaKill = currentTS - player["killTS"] <= datetime.timedelta(
-        seconds=30) and player["killCount"] >= 4 and all_enemies_dead
-
-    doubleTripleQuadraKillTimeout = currentTS - \
-        player["killTS"] > datetime.timedelta(
-            seconds=10) and player["killCount"] < 4
-    pentaKillTimeout = currentTS - player["killTS"] > datetime.timedelta(
-        seconds=30) and player["killCount"] >= 4 or not all_enemies_dead
-
+                seconds=30) and player["killCount"] >= 4 and all_enemies_dead
+    
     # If kill occured in the last frame
-    if prev_team_kills < team_kills:
+    if player["kills"] > player["prevKills"] or player["killCount"] > 0:
 
         # allEnemiesDead = True
         # Check if a player is still dead
@@ -647,28 +674,35 @@ def multikill(player, enemy_players, team_kills, prev_team_kills, currentTS):
             if enemy_player["currentHealth"] > 0:
                 all_enemies_dead = False
 
-        if player["kills"] > player["prevKills"]:
-            if doubleTripleQuadraKill:
-                player["killCount"] += 1
-                player["killTS"] = currentTS
-            elif pentaKill:
-                player["killCount"] += 1
+        # if player["kills"] > player["prevKills"]:
+        if doubleTripleQuadraKill:
+            player["killCount"] += 1
+            player["killTS"] = currentTS 
+        elif pentaKill:
+            player["killCount"] = 0 
+            player["pentaKill"] += 1
+            player["killTS"] = currentTS
 
-        if doubleTripleQuadraKillTimeout or pentaKillTimeout:
+        doubleTripleQuadraKillTimeout = currentTS - \
+            player["killTS"] > datetime.timedelta(seconds=10) and player["killCount"] < 4
+        pentaKillTimeout = currentTS - player["killTS"] > datetime.timedelta(
+            seconds=30) and player["killCount"] == 4 or not all_enemies_dead
+        
+        if doubleTripleQuadraKillTimeout:
             if player["killCount"] == 2:
-                print("double")
+                logging.info("double")
                 player["double"] += 1
             elif player["killCount"] == 3:
-                print("triple")
+                logging.info("triple")
                 player["triple"] += 1
-            elif player["killCount"] == 4:
-                print("quadra")
-                player["quadra"] += 1
-            elif player["killCount"] == 5:
-                print("penta")
-                player["penta"] += 1
             player["killCount"] = 0
 
+        if player["killCount"] == 4:            
+            if currentTS - player["killTS"] > datetime.timedelta(seconds=30) or not all_enemies_dead:
+                logging.info("quadra")
+                player["killCount"] = 0
+                player["quadra"] += 1
+            player["killCount"] = 0
     return player
 
 
@@ -705,13 +739,16 @@ def team_update(team, otherTeam, gameID, teamID, frameTS, teamFirstBlood):
 def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, frameTS, gameID):
     for player in players:
         participantID = player['participantId']
+        
+        logging.info(participantID)
+        
         killTracker[participantID]['currentHealth'] = player['currentHealth']
         killTracker[participantID]['kills'] = player['kills']
-        killTracker[participantID]['prevKills'] = player['kills']
 
-        killTracker[participantID] = multikill(
+        killTracker[participantID] = multikill(participantID,
             killTracker[participantID], enemyPlayers, teamKills, prevTeamKills, frameTS)
         player.update(killTracker[participantID])
+
         player['fantasy_score'] = fantasy_player_scoring(player)
         player['gameid'] = gameID
         player['timestamp'] = frameTS
@@ -723,7 +760,7 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
     Weekly_Predictions = Base.classes.weekly_predictions
     predictionRows = [{'serverid': serverID, 'discordname': discordName, 'blockname': blockName,
                        'gameid': gameID, 'winner': team} for team, gameID in zip(teams, gameIDs)]
-    # print(predictionRows)
+    # logging.info(predictionRows)
 
     engine.execute(Weekly_Predictions.__table__.insert(), predictionRows)
 
@@ -768,7 +805,7 @@ def get_winner(leagueID, matchID):
 def live_data_check(start_time, live_data=False):
     if live_data:
         loopTime = time.time() - start_time
-        print("Game is paused")
+        logging.info("Game is paused")
         sleep(10 - loopTime)
 
 
@@ -798,3 +835,7 @@ def player_data_processing(player_data, participants_details):
         subset=["summoner_name", "gameid", "timestamp"], inplace=True)
     player_data.rename(columns=map_columns, inplace=True)
     return player_data
+
+if __name__ == "__main__":
+    Base, engine = connect_database()
+    database_insert_gamedata(engine, Base)
