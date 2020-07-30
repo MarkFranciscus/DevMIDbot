@@ -549,10 +549,10 @@ def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
         team_data.drop_duplicates(
             subset=["gameid", "teamid", "frame_ts"], inplace=True)
         
-        # player_data.to_sql("player_gamedata", engine,
-        #                    if_exists='append', index=False, method='multi')
-        # team_data.to_sql("team_gamedata", engine,
-        #                  if_exists='append', index=False, method='multi')
+        player_data.to_sql("player_gamedata", engine,
+                           if_exists='append', index=False, method='multi')
+        team_data.to_sql("team_gamedata", engine,
+                         if_exists='append', index=False, method='multi')
 
         live_data_check(start_time, live_data)
 
@@ -835,7 +835,3 @@ def player_data_processing(player_data, participants_details):
         subset=["summoner_name", "gameid", "timestamp"], inplace=True)
     player_data.rename(columns=map_columns, inplace=True)
     return player_data
-
-if __name__ == "__main__":
-    Base, engine = connect_database()
-    database_insert_gamedata(engine, Base)
