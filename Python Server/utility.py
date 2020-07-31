@@ -738,7 +738,7 @@ def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, 
     for player in players:
         participantID = player['participantId']
         
-        logging.info(participantID)
+        # logging.info(participantID)
         
         killTracker[participantID]['currentHealth'] = player['currentHealth']
         killTracker[participantID]['kills'] = player['kills']
