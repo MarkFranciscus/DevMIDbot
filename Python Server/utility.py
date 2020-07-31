@@ -368,16 +368,9 @@ def database_insert_gamedata(engine, Base):
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(
                                       Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
                                           Tournament_Schedule.tournamentid == 104174992692075107, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
-
-    # print(len(gameid_result))
-    threads= []
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        for row in gameid_result:
-            threads.append(executor.submit(parse_gamedata, engine, Base, row.leagueid,
-                        row.tournamentid, row.gameid, row.start_ts))
-    
-    for task in as_completed(threads):
-        logging.info(task.result())
+    for row in gameid_result:
+        parse_gamedata(engine, Base, row.leagueid,
+                        row.tournamentid, row.gameid, row.start_ts)
 
 
 def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_data=False):
