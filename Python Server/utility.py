@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+# import datetime
 import itertools
 import json
 import os
@@ -10,6 +10,9 @@ from difflib import SequenceMatcher
 from time import sleep
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import pickle
+
+from datetime import datetime, timedelta, timezone
 
 import dateutil.parser
 import numpy as np
@@ -131,15 +134,23 @@ def fantasy_player_scoring(player_stats):
     return score
 
 
-def fantasy_team_scoring(teamStats):
+def fantasy_team_scoring(team_stats):
+    """ Calculates fantasy score for a teams stats
+
+    Args:
+        team_stats (dict): A dictionary of team stats
+
+    Returns:
+        [int]: The calculation of team score
+    """
     multipliers = {"dragons": 1, "barons": 2, "towers": 1,
                    "first_blood": 2, "win": 2, "under_30": 2}
     score = 0
     for stat in multipliers.keys():
-        if stat in ["first_blood", "under_30", "win"] and teamStats[stat]:
+        if stat in ["first_blood", "under_30", "win"] and team_stats[stat]:
             score += multipliers[stat]
         else:
-            score += teamStats[stat] * multipliers[stat]
+            score += team_stats[stat] * multipliers[stat]
     return score
 
 
@@ -235,8 +246,8 @@ def database_insert_tournaments(leagues, engine=None):
         tournaments['leagueid'] = leagueid
         tournaments['iscurrent'] = False
         tournaments.rename(columns={'id': 'tournamentid'}, inplace=True)
-        dt = datetime.datetime.utcnow()
-        dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt = datetime.utcnow()
+        dt = dt.replace(tzinfo=timezone.utc)
         p = (tournaments['startdate'] <= dt) & (dt <= tournaments['enddate'])
         tournaments['iscurrent'] = np.where(p, True, False)
         all_tournaments = pd.concat(
@@ -262,8 +273,8 @@ def database_insert_schedule(engine):
                 leagueId=leagueID, include_pagetoken=True, pageToken=page_token)
             page_token = pages['older']
             tournaments = lolesports.getTournamentsForLeague(leagueID)
-            dt = datetime.datetime.utcnow()
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
+            dt = datetime.utcnow()
+            dt = dt.replace(tzinfo=timezone.utc)
             p = (tournaments['startdate'] <= dt) & (
                 dt <= tournaments['enddate'])
             tournaments['iscurrent'] = np.where(p, True, False)
@@ -335,10 +346,10 @@ def round_robin(teams):
 def round_time(dt=None, roundTo=10):
     """Round a datetime object to any time lapse in seconds"""
     if dt == None:
-        dt = datetime.datetime.now()
+        dt = datetime.now()
     seconds = (dt.replace(tzinfo=None) - dt.min).seconds
     rounding = (seconds+roundTo/2) // roundTo * roundTo
-    return dt + datetime.timedelta(0, rounding-seconds, -dt.microsecond)
+    return dt + timedelta(0, rounding-seconds, -dt.microsecond)
 
 
 def database_update_teams(engine):
@@ -363,18 +374,19 @@ def database_insert_gamedata(engine, Base):
     # SQL to get split id for given region
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
-    today = datetime.datetime.now()
+    today = datetime.now()
     gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
                                   Tournament_Schedule.start_ts, Tournament_Schedule.state).join(
                                       Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
                                           Tournament_Schedule.tournamentid == 104174992692075107, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
     for row in gameid_result:
+        logging.info(row)
         parse_gamedata(engine, Base, row.leagueid,
                         row.tournamentid, row.gameid, row.start_ts)
 
 
 def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_data=False):
-    start_ts += datetime.timedelta(hours=4)
+    start_ts += timedelta(hours=4)
     date_time_obj = round_time(start_ts)
     kill_tracker = {}
     timestamps = []
@@ -394,7 +406,7 @@ def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
         team_data = pd.DataFrame()
 
         timestamp = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
-        date_time_obj += datetime.timedelta(seconds=10)
+        date_time_obj += timedelta(seconds=10)
 
         # Catch if api throws error
         try:
@@ -427,10 +439,10 @@ def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
             state = frame['gameState']
 
             if '.' not in frame['rfc460Timestamp']:
-                frameTS = datetime.datetime.strptime(
+                frameTS = datetime.strptime(
                     frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%SZ')
             else:
-                frameTS = datetime.datetime.strptime(
+                frameTS = datetime.strptime(
                     frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
 
             # Checks if game is paused
@@ -496,14 +508,14 @@ def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_
                 blue_team['win'] = blue_code == winner_code
                 red_team['win'] = red_code == winner_code
 
-                endTS = datetime.datetime.strptime(
+                endTS = datetime.strptime(
                     frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 if blue_team['win']:
                     blue_team['under_30'] = endTS - \
-                        startTS < datetime.timedelta(minutes=30)
+                        startTS < timedelta(minutes=30)
                 else:
                     red_team['under_30'] = endTS - \
-                        startTS < datetime.timedelta(minutes=30)
+                        startTS < timedelta(minutes=30)
                 game.winner_code = winner_code
                 logging.info(
                     f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
@@ -559,65 +571,65 @@ def get_fantasy_league_table(engine, Base, serverid, tournamentid=10346243943868
     FantasyTeam = Base.classes.fantasyteam
     blockName = get_block_name(engine, Base, tournamentid)
     selectFantasyPlayerScore = f"""
-	select
-		summoner_name,
-		"role" ,
-		sum(fantasy_score) as fantasy_score
-	from
-		player_gamedata as pg
-	inner join (
-		select
-			gameid
-		from
-			tournament_schedule
-		where
-			blockname = '{blockName}'
-			and tournamentid =  {tournamentid}) as games on
-		pg.gameid = games.gameid
-	inner join (
-		select
-			gameid,
-			max(frame_ts)
-		from
-			player_gamedata
-		group by
-			gameid) as most_recent_ts on
-		most_recent_ts.gameid = games.gameid
-		and pg.frame_ts = most_recent_ts.max
-	group by
-		summoner_name,
-		"role"
-	"""
+    select
+        summoner_name,
+        "role" ,
+        sum(fantasy_score) as fantasy_score
+    from
+        player_gamedata as pg
+    inner join (
+        select
+            gameid
+        from
+            tournament_schedule
+        where
+            blockname = '{blockName}'
+            and tournamentid =  {tournamentid}) as games on
+        pg.gameid = games.gameid
+    inner join (
+        select
+            gameid,
+            max(frame_ts)
+        from
+            player_gamedata
+        group by
+            gameid) as most_recent_ts on
+        most_recent_ts.gameid = games.gameid
+        and pg.frame_ts = most_recent_ts.max
+    group by
+        summoner_name,
+        "role"
+    """
     selectFantasyTeamScore = f"""select
-		code as "summoner_name",
-		'team' as "role",
-		sum(fantasy_score) as fantasy_score
-	from
-		team_gamedata as tg
-	inner join (
-		select
-			gameid
-		from
-			tournament_schedule
-		where
-			blockname = '{blockName}'
-			and tournamentid = {tournamentid} ) as games on
-		tg.gameid = games.gameid
-	inner join (
-		select
-			gameid,
-			max(frame_ts)
-		from
-			team_gamedata
-		group by
-			gameid) as most_recent_ts on
-		most_recent_ts.gameid = games.gameid
-		and tg.frame_ts = most_recent_ts.max inner join
-		teams t on t.teamid = tg.teamid 
-	group by
-		code,
-		"role"
-		"""
+        code as "summoner_name",
+        'team' as "role",
+        sum(fantasy_score) as fantasy_score
+    from
+        team_gamedata as tg
+    inner join (
+        select
+            gameid
+        from
+            tournament_schedule
+        where
+            blockname = '{blockName}'
+            and tournamentid = {tournamentid} ) as games on
+        tg.gameid = games.gameid
+    inner join (
+        select
+            gameid,
+            max(frame_ts)
+        from
+            team_gamedata
+        group by
+            gameid) as most_recent_ts on
+        most_recent_ts.gameid = games.gameid
+        and tg.frame_ts = most_recent_ts.max inner join
+        teams t on t.teamid = tg.teamid 
+    group by
+        code,
+        "role"
+        """
 
     roles = ['Top', 'Jungle', 'Mid', 'Bottom', 'Support', 'Flex', 'Team']
     session = Session(engine)
@@ -649,7 +661,7 @@ def get_fantasy_league_table(engine, Base, serverid, tournamentid=10346243943868
 def get_block_name(engine, Base, tournamentid):
     Tournament_Schedule = Base.classes.tournament_schedule
     session = Session(engine)
-    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.start_ts >= datetime.datetime.now() - datetime.timedelta(days=3),
+    blockResult = session.query(Tournament_Schedule.blockname).filter(Tournament_Schedule.start_ts >= datetime.now() - timedelta(days=3),
                                                                       Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
     return blockResult[0]
 
@@ -658,9 +670,9 @@ def get_block_name(engine, Base, tournamentid):
 
 def multikill(participantID, player, enemy_players, team_kills, prev_team_kills, currentTS):
     all_enemies_dead = True
-    doubleTripleQuadraKill = currentTS - player["killTS"] <= datetime.timedelta(
+    doubleTripleQuadraKill = currentTS - player["killTS"] <= timedelta(
                                 seconds=10) and player["killCount"] < 4
-    pentaKill = currentTS - player["killTS"] <= datetime.timedelta(
+    pentaKill = currentTS - player["killTS"] <= timedelta(
                 seconds=30) and player["killCount"] >= 4 and all_enemies_dead
     
     # If kill occured in the last frame
@@ -682,8 +694,8 @@ def multikill(participantID, player, enemy_players, team_kills, prev_team_kills,
             player["killTS"] = currentTS
 
         doubleTripleQuadraKillTimeout = currentTS - \
-            player["killTS"] > datetime.timedelta(seconds=10) and player["killCount"] < 4
-        pentaKillTimeout = currentTS - player["killTS"] > datetime.timedelta(
+            player["killTS"] > timedelta(seconds=10) and player["killCount"] < 4
+        pentaKillTimeout = currentTS - player["killTS"] > timedelta(
             seconds=30) and player["killCount"] == 4 or not all_enemies_dead
         
         if doubleTripleQuadraKillTimeout:
@@ -696,7 +708,7 @@ def multikill(participantID, player, enemy_players, team_kills, prev_team_kills,
             player["killCount"] = 0
 
         if player["killCount"] == 4:            
-            if currentTS - player["killTS"] > datetime.timedelta(seconds=30) or not all_enemies_dead:
+            if currentTS - player["killTS"] > timedelta(seconds=30) or not all_enemies_dead:
                 logging.info("quadra")
                 player["killCount"] = 0
                 player["quadra"] += 1
@@ -765,7 +777,7 @@ def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, d
 
 def update_predictions(engine):
     update_weekly_predictions = text(
-        f"""update weekly_predictions wp set correct=(winner_code = winner) from tournament_schedule ts where wp.gameid=ts.gameid""")
+        f"""update midbot.weekly_predictions wp set correct=(winner_code = winner) from midbot.tournament_schedule ts where wp.gameid=ts.gameid""")
     engine.execute(update_weekly_predictions)
 
 
@@ -834,6 +846,186 @@ def player_data_processing(player_data, participants_details):
     player_data.rename(columns=map_columns, inplace=True)
     return player_data
 
+def pandas_gamedata(gameID):
+
+    team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
+                    'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
+
+    logging.info(f"Starting game {gameID}")
+    
+    participants, teams, participants_details = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    
+    dont_stop = False
+    timestamp = "2020-01-26T01:07:30Z"
+    date_time_obj =datetime.strptime(
+                    timestamp, '%Y-%m-%dT%H:%M:%SZ')
+    
+    # Catch if api throws error
+    while dont_stop:
+        try:
+            temp_metadata, temp_participants, temp_teams, matchID = lolesports.getWindow(
+                gameID, timestamp)
+        except Exception as error:
+            logging.info(f"{error} - {timestamp} - {gameID}")
+            # live_data_check(start_time, live_data)
+        try:
+            temp_participants_details = lolesports.getDetails(gameID)            
+        except Exception as error:
+            logging.info(error)
+        participants = pd.concat([participants, temp_participants], ignore_index=True)
+        participants_details = pd.concat([participants_details, temp_participants_details], ignore_index=True)
+        teams = pd.concat([teams, temp_teams], ignore_index=True)
+
+        date_time_obj += timedelta(seconds=10)
+        timestamp = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+        print(timestamp)
+        if "finished" in temp_teams['gameState'].unique():
+            break
+    
+    participants = pd.read_pickle('./participants.pkl')
+    participants_details = pd.read_pickle('./participants_details.pkl')
+    teams = pd.read_pickle('./teams.pkl')
+    
+    # Start processing frame data
+    teams['num_dragons'] = len(teams['dragons'])
+    teams['gameid'] = gameID
+    teams['win'] = False
+    teams['under_30'] = False
+    
+    participants.sort_values(['timestamp', 'participantId'], ignore_index=True, inplace=True)
+    participants['multikill'] = 1    
+    
+    participants['kill_event'] = participants.groupby('participantId')['kills'].diff().fillna(0).astype(bool)
+    
+    participants.loc[(participants['kill_event']==True), 'kill_count'] = 1
+    
+    participants.loc[participants['kill_event']==True, 'kill_timeout'] = participants[participants['kill_event']==True].groupby('participantId')['timestamp'].diff().fillna(pd.Timedelta(0, unit='S'))
+    
+    
+    participants.loc[(participants['kill_event']==True) & (participants['kill_timeout'] > timedelta(seconds=30)), 'kill_reset'] = 1
+    participants['kill_reset'].fillna(0, inplace=True)
+    
+    
+    
+    participants['cumsum'] = participants[participants['kill_event']==True].groupby('participantId')['kill_reset'].cumsum()    
+    participants['multikill'] = participants[participants['kill_event']==True].groupby(['participantId', 'cumsum'])['kill_count'].cumsum()
+
+    participants['max_health'] = participants.groupby(['timestamp', 'code'])['currentHealth'].transform(max)
+    df = participants[['timestamp', 'code', 'max_health']].copy()
+    participants.drop('max_health', axis=1, inplace=True)
+    code_1 = df['code'].unique()[0]
+    code_2 = df['code'].unique()[1]
+    df['code'] = df['code'].map({code_1:code_2, code_2: code_1})
+    participants = pd.merge(participants, df, on=['timestamp', 'code'])
+    participants.drop_duplicates(inplace=True)
+    participants.sort_values(['timestamp', 'participantId'], ignore_index=True, inplace=True)
+
+    participants.loc[(participants['kill_event']==True) & (participants['multikill'] <= 4) & (participants['kill_timeout'] > timedelta(seconds=10)), 'kill_reset'] = 1
+    participants.loc[(participants['kill_event']==True) & (participants['multikill'] == 5) & ((participants['kill_timeout'] > timedelta(seconds=30)) | (participants['max_health'] > 0)), 'kill_reset'] = 1
+    
+
+    participants['cumsum'] = participants[participants['kill_event']==True].groupby('participantId')['kill_reset'].cumsum()    
+    participants['multikill'] = participants[participants['kill_event']==True].groupby(['participantId', 'cumsum'])['kill_count'].cumsum()
+    participants['multikill'].fillna(0, inplace=True)
+    participants.drop(['max_health', 'cumsum', 'kill_event', 'kill_count', 'kill_timeout', 'kill_reset'], axis=1, inplace=True)
+
+    print(participants)
+    
+    
+    
+        
+            # Checks if game is paused
+            
+            # Initializes some variables at the start of the game
+            #   Timestamp of game start
+            #   kill tracker for multikills
+        #     for player in blue_players:
+        #             kill_tracker[player['participantId']] = {
+        #                 'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
+
+        #         for player in red_players:
+        #             kill_tracker[player['participantId']] = {
+        #                 'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
+
+        #     blue_players, kill_tracker = player_update(
+        #         blue_players, red_players, kill_tracker, blue_team['totalKills'], blue_prev_kills, frameTS, gameID)
+        #     red_players, kill_tracker = player_update(
+        #         red_players, blue_players, kill_tracker, red_team['totalKills'], red_prev_kills, frameTS, gameID)
+
+        #     blue_team = team_update(
+        #         blue_team, red_team, gameID, blue_team_ID, frameTS, blue_first_blood)
+        #     red_team = team_update(
+        #         red_team, blue_team, gameID, red_team_ID, frameTS, red_first_blood)
+
+        #     if blue_team['first_blood']:
+        #         blue_first_blood = True
+            
+        #     if red_team['first_blood']:
+        #         red_first_blood = True
+
+        #     # Checks which team won
+        #     if state == "finished":
+
+        #         winner_code = get_winner(leagueID, matchID)
+
+        #         session = Session(engine)
+        #         Tournament_Schedule = Base.classes.tournament_schedule
+        #         game = session.query(Tournament_Schedule).filter(
+        #             Tournament_Schedule.gameid == gameID).first()
+        #         game.state = state
+
+        #         blue_team['win'] = blue_code == winner_code
+        #         red_team['win'] = red_code == winner_code
+
+        #         endTS = datetime.strptime(
+        #             frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        #         if blue_team['win']:
+        #             blue_team['under_30'] = endTS - \
+        #                 startTS < timedelta(minutes=30)
+        #         else:
+        #             red_team['under_30'] = endTS - \
+        #                 startTS < timedelta(minutes=30)
+        #         game.winner_code = winner_code
+        #         logging.info(
+        #             f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
+        #         session.commit()
+
+        #     blue_team['fantasy_score'] = fantasy_team_scoring(blue_team)
+        #     red_team['fantasy_score'] = fantasy_team_scoring(red_team)
+
+        #     teams = teams[team_columns]
+
+        #     team_data = pd.concat([team_data, teams], ignore_index=True)
+            
+        # player_data = player_data_processing(player_data, participants_details)
+
+        # team_data.drop_duplicates(
+        #     subset=["gameid", "teamid", "frame_ts"], inplace=True)
+        
+        # logging.debug("Inserting")
+        # player_data.to_sql("player_gamedata", engine,
+        #                    if_exists='append', index=False, method='multi', schema='midbot')
+        # team_data.to_sql("team_gamedata", engine,
+        #                  if_exists='append', index=False, method='multi', schema='midbot')
+
+        # live_data_check(start_time, live_data)
+
+def intervaled_cumsum(a, trigger_val=1, start_val = 0, invalid_specifier=0):
+    out = np.ones(a.size,dtype=int)    
+    idx = np.flatnonzero(a==trigger_val)
+    if len(idx)==0:
+        return np.full(a.size,invalid_specifier)
+    else:
+        out[idx[0]] = -idx[0] + 1
+        out[0] = start_val
+        out[idx[1:]] = idx[:-1] - idx[1:] + 1
+        np.cumsum(out, out=out)
+        out[:idx[0]] = invalid_specifier
+        return out
+
 if __name__ == "__main__":
-    Base, engine = connect_database()
-    database_insert_gamedata(engine, Base)
+    # Base, engine = connect_database()
+    # update_winners(Base, engine)
+    # update_predictions(engine)
+    # print()
+    pandas_gamedata(103462440145619680)

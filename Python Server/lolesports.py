@@ -12,17 +12,17 @@ header = {"x-api-key": "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"}
 
 
 def getLeagues(hl="en-US"):
-    
+
     param = {"hl": hl}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getLeagues",
                      headers=header, params=param)
 
     rawData = json.loads(r.text)
     leagues = rawData["data"]["leagues"]
-    
+
     leagues = pd.DataFrame().from_dict(json_normalize(
         leagues), orient='columns')
-    
+
     return leagues
 
 
@@ -32,7 +32,7 @@ def getSchedule(leagueId, include_pagetoken=False, hl="en-US", pageToken=""):
                      headers=header, params=param)
     rawData = json.loads(r.text)
     events = rawData["data"]["schedule"]["events"]
-    
+
     if include_pagetoken:
         pageTokens = rawData["data"]["schedule"]["pages"]
         return events, pageTokens
@@ -57,7 +57,8 @@ def getTournamentsForLeague(leagueId, hl="en-US"):
     data = rawData["data"]["leagues"][0]["tournaments"]
 
     tournaments = pd.DataFrame().from_dict(json_normalize(data))
-    tournaments['startDate'] = pd.to_datetime(tournaments['startDate'], utc=True)
+    tournaments['startDate'] = pd.to_datetime(
+        tournaments['startDate'], utc=True)
     tournaments['endDate'] = pd.to_datetime(tournaments['endDate'], utc=True)
     tournaments.columns = map(str.lower, tournaments.columns)
     return tournaments
@@ -92,7 +93,7 @@ def getSlugs(tournamentId, hl="en-US"):
                      headers=header, params=param)
     rawData = json.loads(r.text)
     # print(f"{r.elapsed.total_seconds()}")
-    if  "errors" in rawData.keys():
+    if "errors" in rawData.keys():
         return []
     stages = rawData["data"]["standings"][0]["stages"]
 
@@ -137,18 +138,15 @@ def getEventDetails(matchId, hl="en-US"):
     return rawData["data"]["event"]
 
 
-def get_teams(id = None, hl="en-US"):
+def get_teams(id=None, hl="en-US"):
 
     param = {"hl": hl, "id": id}
     r = requests.get("https://esports-api.lolesports.com/persisted/gw/getTeams",
                      headers=header, params=param)
     rawData = json.loads(r.text)
 
-    team = pd.DataFrame.from_dict(json_normalize(
-        rawData["data"]["teams"]), orient='columns')
-    # print(rawData)
-    del team['players']
-    # print(team)
+    team = pd.from_dict(rawData["data"]["teams"])  # , orient='columns')
+    team.drop('players', axis=1, inplace=True)
     return team
 
 
@@ -174,30 +172,66 @@ def getGames():
     pass
 
 
-def getWindow(gameId, starting_time=""):
+def getWindow(gameID, starting_time=""):
     params = {'startingTime': starting_time}
     r = requests.get(
-        "https://feed.lolesports.com/livestats/v1/window/{}".format(gameId), params=params)
+        "https://feed.lolesports.com/livestats/v1/window/{}".format(gameID), params=params)
     # r.encoding = 'utf-8'
-    if r.status_code == 200: 
-        rawData = json.loads(r.text)
+    if r.status_code == 200:
+        raw_data = json.loads(r.text)
+
+        blue_teamID = raw_data['gameMetadata']['blueTeamMetadata']['esportsTeamId']
+        blue_metadata = json_normalize(
+            raw_data['gameMetadata']['blueTeamMetadata']['participantMetadata'])
+
+        red_teamID = raw_data['gameMetadata']['redTeamMetadata']['esportsTeamId']
+        red_metadata = json_normalize(
+            raw_data['gameMetadata']['redTeamMetadata']['participantMetadata'])
+
+        metadata = pd.concat([blue_metadata, red_metadata], ignore_index=True)
+        metadata[['code', 'summoner_name']] = metadata['summonerName'].str.split(expand=True)
         
-        blueTeam = rawData['gameMetadata']['blueTeamMetadata']['esportsTeamId']
-        blueMetadata_dict = rawData['gameMetadata']['blueTeamMetadata']['participantMetadata']
+        red_team = json_normalize(raw_data['frames'], meta=[
+                                  'redTeam', 'rfc460Timestamp', 'gameState'])
+        blue_team = json_normalize(raw_data['frames'], meta=[
+                                   'blueTeam', 'rfc460Timestamp', 'gameState'])
+
+        red_team.drop(list(red_team.filter(
+            regex='participants|blueTeam')), axis=1, inplace=True)
+        blue_team.drop(list(blue_team.filter(
+            regex='participants|redTeam')), axis=1, inplace=True)
         
-        redTeam = rawData['gameMetadata']['redTeamMetadata']['esportsTeamId']
-        redMetadata_dict = rawData['gameMetadata']['redTeamMetadata']['participantMetadata']
+        red_team.columns = red_team.columns.str.replace(r'redTeam.', '')
+        blue_team.columns = blue_team.columns.str.replace(r'blueTeam.', '')
+        
+        red_team['teamID'] = red_teamID
+        red_team['side'] = 'red'
+        red_team['code'] = metadata.code.unique()[0]
+        
+        blue_team['teamID'] = blue_teamID
+        blue_team['side'] = 'blue'
+        blue_team['code'] = metadata.code.unique()[1] 
 
-        blueMetadata = pd.DataFrame().from_dict(json_normalize(blueMetadata_dict), orient='columns')
-        redMetadata = pd.DataFrame().from_dict(json_normalize(redMetadata_dict), orient='columns')
+        teams = pd.concat([red_team, blue_team], ignore_index=True)
+        teams['timestamp'] = pd.to_datetime(teams['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
 
-        frames = rawData['frames']
+        blue_participants = json_normalize(
+            raw_data['frames'], ['blueTeam', 'participants'], ['rfc460Timestamp'])
+        red_participants = json_normalize(
+            raw_data['frames'], ['redTeam', 'participants'], ['rfc460Timestamp'])
 
-        matchid = rawData['esportsMatchId']
-        return blueTeam, blueMetadata, redTeam, redMetadata, frames, matchid
+        participants = pd.concat(
+            [blue_participants, red_participants], ignore_index=True)
+        participants = pd.merge(participants, metadata, on='participantId')
+        participants['timestamp'] = pd.to_datetime(participants['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+        participants.drop('summonerName', axis=1, inplace=True)
+        
+        matchID = raw_data['esportsMatchId']
+        return metadata, participants, teams, matchID
     else:
         raise Exception(f"getWindow giving status code {r.status_code}")
-    
+
+
 def navItems():
     pass
 
@@ -223,19 +257,24 @@ def format_standing_list(standings):
 def getDetails(gameId, timestamp="", participantIds=""):
     params = {'startingTime': timestamp,
               'participantIds': participantIds}
-    r = requests.get("https://feed.lolesports.com/livestats/v1/details/{}".format(gameId), params=params)
+    r = requests.get(
+        "https://feed.lolesports.com/livestats/v1/details/{}".format(gameId), params=params)
     rawData = json.loads(r.text)
     frames = rawData["frames"]
-    participants = pd.DataFrame()
-    for frame in frames:
-        participant_data = frame["participants"]
-        for participant in participant_data:
-            if '.' not in frame['rfc460Timestamp']:
-                frameTS = datetime.datetime.strptime(
-                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%SZ')
-            else:
-                frameTS = datetime.datetime.strptime(
-                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
-            participant['timestamp'] = frameTS
-        participants = pd.concat([participants, pd.DataFrame().from_dict(json_normalize(participant_data), orient='columns')])
-    return participants
+    
+    participant_data = json_normalize(frames, 'participants', 'rfc460Timestamp')
+    participant_data['timestamp'] = pd.to_datetime(participant_data['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+    return participant_data
+
+
+# if __name__ == "__main__":
+    # get_teams()
+    # import time, utility
+    # startTime = time.time()
+
+#####your python script#####
+    
+    # getWindow(103462440145619680)
+    # getDetails(103462440145619680)
+    # executionTime = (time.time() - startTime)
+    # print('Execution time in seconds: ' + str(executionTime))
