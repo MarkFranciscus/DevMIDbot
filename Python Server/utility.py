@@ -1,18 +1,17 @@
 import asyncio
-# import datetime
 import itertools
 import json
+import logging
 import os
+import pickle
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from configparser import ConfigParser
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from time import sleep
-import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import pickle
-
-from datetime import datetime, timedelta, timezone
+from timeit import default_timer
 
 import dateutil.parser
 import numpy as np
@@ -32,7 +31,9 @@ import lolesports
 conn = None
 Base = None
 
-logging.basicConfig(level=logging.DEBUG, filename='midbot.log', filemode='w', format='%(name)s - %(process)d - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, filename='midbot.log', filemode='w',
+                    format='%(name)s - %(process)d - %(levelname)s - %(message)s')
+
 
 def config(filename='config.ini', section='database'):
     """Reads config file, returns the given section
@@ -84,7 +85,7 @@ def connect_database():
 
     # connect to the PostgreSQL server
     logging.info(f"Connecting to the PostgreSQL database")
-    
+
     # Create URL to connect to database, connect, and set default scheme to public
     url = URL(**params)
     engine = create_engine(url, client_encoding='utf8', use_batch_mode=True)
@@ -125,7 +126,8 @@ def fantasy_player_scoring(player_stats):
         float: final calculation of fantasy score
     """
     score = 0
-    multipliers = {"kills": 2.0, "deaths": -0.5, "assists": 1.5, "creepScore": 0.01,  "triple": 2, "quadra": 5, "penta": 10}
+    multipliers = {"kills": 2.0, "deaths": -0.5, "assists": 1.5,
+                   "creepScore": 0.01,  "triple": 2, "quadra": 5, "penta": 10}
     is_over_10 = False
     for stat in multipliers.keys():
         score += player_stats[stat] * multipliers[stat]
@@ -141,7 +143,7 @@ def fantasy_team_scoring(team_stats):
         team_stats (dict): A dictionary of team stats
 
     Returns:
-        [int]: The calculation of team score
+        int: The calculation of team score
     """
     multipliers = {"dragons": 1, "barons": 2, "towers": 1,
                    "first_blood": 2, "win": 2, "under_30": 2}
@@ -193,7 +195,7 @@ def init_data(engine):
     tournaments = database_insert_tournaments(leagues, engine)
 
     # teams
-    current_tournaments = tournaments[tournaments['iscurrent'] == True]
+    current_tournaments = tournaments[tournaments['iscurrent']]
     database_insert_teams(current_tournaments, engine)
 
     # tournamentschedule
@@ -343,19 +345,35 @@ def round_robin(teams):
     return(schedule)
 
 
-def round_time(dt=None, roundTo=10):
-    """Round a datetime object to any time lapse in seconds"""
-    if dt == None:
+def round_time(dt=None, date_delta=timedelta(seconds=10), to='down'):
+    """Round a datetime object to a multiple of a timedelta
+    
+    Args:
+        dt (datetime): datetime.datetime object, default now.
+        date_delta (timedelta) : timedelta object, we round to a multiple of this, default 1 minute.
+        to (str) : Round up, down or to nearest
+    """
+    round_to = date_delta.total_seconds()
+
+    if dt is None:
         dt = datetime.now()
-    seconds = (dt.replace(tzinfo=None) - dt.min).seconds
-    rounding = (seconds+roundTo/2) // roundTo * roundTo
-    return dt + timedelta(0, rounding-seconds, -dt.microsecond)
+    seconds = (dt - dt.min).seconds
+
+    if to == 'up':
+        # // is a floor division, not a comment on following line (like in javascript):
+        rounding = (seconds + round_to) // round_to * round_to
+    elif to == 'down':
+        rounding = seconds // round_to * round_to
+    else:
+        rounding = (seconds + round_to / 2) // round_to * round_to
+
+    return dt + timedelta(0, rounding - seconds, -dt.microsecond)
 
 
 def database_update_teams(engine):
     leagues = database_insert_leagues(engine)
     tournaments = database_insert_tournaments(leagues, engine)
-    current_tournaments = tournaments[tournaments['iscurrent'] == True]
+    current_tournaments = tournaments[tournaments['iscurrent']]
     teams = database_insert_teams(current_tournaments, engine)
 
     oldTeams = pd.read_sql_table("teams", engine)
@@ -382,189 +400,7 @@ def database_insert_gamedata(engine, Base):
     for row in gameid_result:
         logging.info(row)
         parse_gamedata(engine, Base, row.leagueid,
-                        row.tournamentid, row.gameid, row.start_ts)
-
-
-def parse_gamedata(engine, Base, leagueID, tournamentID, gameID, start_ts, live_data=False):
-    start_ts += timedelta(hours=4)
-    date_time_obj = round_time(start_ts)
-    kill_tracker = {}
-    timestamps = []
-    game_start_flag = True
-    blue_first_blood = False
-    red_first_blood = False
-    state = "unstarted"
-    session = Session(engine)
-    team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
-                    'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
-
-    logging.info(f"Starting game {gameID}")
-    while state != "finished":
-
-        start_time = time.time()
-        player_data = pd.DataFrame()
-        team_data = pd.DataFrame()
-
-        timestamp = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
-        date_time_obj += timedelta(seconds=10)
-
-        # Catch if api throws error
-        try:
-            blue_team_ID, blue_metadata, red_team_ID, red_metadata, frames, matchID = lolesports.getWindow(
-                gameID, starting_time=timestamp)
-        except Exception as error:
-            # logging.info(f"{error} - {timestamp} - {gameID}")
-            live_data_check(start_time, live_data)
-            continue
-        try:
-            participants_details = lolesports.getDetails(gameID, timestamp)
-        except Exception as error:
-            logging.info(error)
-            continue
-
-        # If there's only two frames then they will be redundant frames ¯\_(ツ)_/¯
-        if (len(frames) < 2):
-            live_data_check(start_time, live_data)
-            continue
-
-        # Team's codes
-        blue_code = blue_metadata["summonerName"].iloc[0].split(' ', 1)[0]
-        red_code = red_metadata["summonerName"].iloc[0].split(' ', 1)[0]
-
-        game_metadata = pd.concat(
-            [blue_metadata, red_metadata], ignore_index=True)
-
-        # Start processing frame data
-        for frame in frames:
-            state = frame['gameState']
-
-            if '.' not in frame['rfc460Timestamp']:
-                frameTS = datetime.strptime(
-                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%SZ')
-            else:
-                frameTS = datetime.strptime(
-                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
-
-            # Checks if game is paused
-            if state == 'paused' or frameTS in timestamps:
-                live_data_check(start_time, live_data)
-                continue
-            timestamps.append(frameTS)
-            
-            participants = pd.DataFrame()
-            teams = pd.DataFrame()
-
-            blue_team = frame['blueTeam']
-            red_team = frame['redTeam']
-
-            blue_players = blue_team.pop('participants')
-            red_players = red_team.pop('participants')
-
-            # Initializes some variables at the start of the game
-            #   Timestamp of game start
-            #   kill tracker for multikills
-            if game_start_flag:
-                game_start_flag = False
-                startTS = frameTS
-
-                blue_prev_kills = 0
-                red_prev_kills = 0
-
-                for player in blue_players:
-                    kill_tracker[player['participantId']] = {
-                        'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
-
-                for player in red_players:
-                    kill_tracker[player['participantId']] = {
-                        'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
-
-            blue_players, kill_tracker = player_update(
-                blue_players, red_players, kill_tracker, blue_team['totalKills'], blue_prev_kills, frameTS, gameID)
-            red_players, kill_tracker = player_update(
-                red_players, blue_players, kill_tracker, red_team['totalKills'], red_prev_kills, frameTS, gameID)
-
-            blue_team = team_update(
-                blue_team, red_team, gameID, blue_team_ID, frameTS, blue_first_blood)
-            red_team = team_update(
-                red_team, blue_team, gameID, red_team_ID, frameTS, red_first_blood)
-
-            if blue_team['first_blood']:
-                blue_first_blood = True
-            
-            if red_team['first_blood']:
-                red_first_blood = True
-
-            # Checks which team won
-            if state == "finished":
-
-                winner_code = get_winner(leagueID, matchID)
-
-                session = Session(engine)
-                Tournament_Schedule = Base.classes.tournament_schedule
-                game = session.query(Tournament_Schedule).filter(
-                    Tournament_Schedule.gameid == gameID).first()
-                game.state = state
-
-                blue_team['win'] = blue_code == winner_code
-                red_team['win'] = red_code == winner_code
-
-                endTS = datetime.strptime(
-                    frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                if blue_team['win']:
-                    blue_team['under_30'] = endTS - \
-                        startTS < timedelta(minutes=30)
-                else:
-                    red_team['under_30'] = endTS - \
-                        startTS < timedelta(minutes=30)
-                game.winner_code = winner_code
-                logging.info(
-                    f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
-                session.commit()
-
-            blue_players = pd.DataFrame().from_dict(json_normalize(blue_players))
-            red_players = pd.DataFrame().from_dict(json_normalize(red_players))
-
-            participants = pd.concat(
-                [participants, blue_players, red_players], ignore_index=True)
-
-            temp_participants = pd.merge(
-                participants, game_metadata, on="participantId")
-            player_data = pd.concat(
-                [player_data, temp_participants], ignore_index=True)
-
-            blue_team['fantasy_score'] = fantasy_team_scoring(blue_team)
-            red_team['fantasy_score'] = fantasy_team_scoring(red_team)
-
-            teams = pd.concat([teams, pd.DataFrame().from_dict(
-                json_normalize(blue_team)), pd.DataFrame().from_dict(
-                json_normalize(red_team))], ignore_index=True)
-            teams = teams[team_columns]
-
-            team_data = pd.concat([team_data, teams], ignore_index=True)
-
-            blue_prev_kills = blue_team["totalKills"]
-            red_prev_kills = red_team["totalKills"]
-
-        if state == 'paused':
-            live_data_check(start_time, live_data)
-            continue
-
-        if player_data.empty:
-            live_data_check(start_time, live_data)
-            continue
-
-        player_data = player_data_processing(player_data, participants_details)
-
-        team_data.drop_duplicates(
-            subset=["gameid", "teamid", "frame_ts"], inplace=True)
-        
-        logging.debug("Inserting")
-        player_data.to_sql("player_gamedata", engine,
-                           if_exists='append', index=False, method='multi', schema='midbot')
-        team_data.to_sql("team_gamedata", engine,
-                         if_exists='append', index=False, method='multi', schema='midbot')
-
-        live_data_check(start_time, live_data)
+                       row.tournamentid, row.gameid, row.start_ts)
 
 
 def get_fantasy_league_table(engine, Base, serverid, tournamentid=103462439438682788):
@@ -665,56 +501,6 @@ def get_block_name(engine, Base, tournamentid):
                                                                       Tournament_Schedule.tournamentid == tournamentid).order_by(Tournament_Schedule.start_ts).first()
     return blockResult[0]
 
-# Timeout check not working
-
-
-def multikill(participantID, player, enemy_players, team_kills, prev_team_kills, currentTS):
-    all_enemies_dead = True
-    doubleTripleQuadraKill = currentTS - player["killTS"] <= timedelta(
-                                seconds=10) and player["killCount"] < 4
-    pentaKill = currentTS - player["killTS"] <= timedelta(
-                seconds=30) and player["killCount"] >= 4 and all_enemies_dead
-    
-    # If kill occured in the last frame
-    if player["kills"] > player["prevKills"] or player["killCount"] > 0:
-
-        # allEnemiesDead = True
-        # Check if a player is still dead
-        for enemy_player in enemy_players:
-            if enemy_player["currentHealth"] > 0:
-                all_enemies_dead = False
-
-        # if player["kills"] > player["prevKills"]:
-        if doubleTripleQuadraKill:
-            player["killCount"] += 1
-            player["killTS"] = currentTS 
-        elif pentaKill:
-            player["killCount"] = 0 
-            player["pentaKill"] += 1
-            player["killTS"] = currentTS
-
-        doubleTripleQuadraKillTimeout = currentTS - \
-            player["killTS"] > timedelta(seconds=10) and player["killCount"] < 4
-        pentaKillTimeout = currentTS - player["killTS"] > timedelta(
-            seconds=30) and player["killCount"] == 4 or not all_enemies_dead
-        
-        if doubleTripleQuadraKillTimeout:
-            if player["killCount"] == 2:
-                logging.info("double")
-                player["double"] += 1
-            elif player["killCount"] == 3:
-                logging.info("triple")
-                player["triple"] += 1
-            player["killCount"] = 0
-
-        if player["killCount"] == 4:            
-            if currentTS - player["killTS"] > timedelta(seconds=30) or not all_enemies_dead:
-                logging.info("quadra")
-                player["killCount"] = 0
-                player["quadra"] += 1
-            player["killCount"] = 0
-    return player
-
 
 def check_role_constraint(players, role, serverid, summoner_name, Base):
     """[summary]
@@ -733,37 +519,6 @@ def check_role_constraint(players, role, serverid, summoner_name, Base):
                   "bot": 0, "support": 0, "team": 0}
     Players = Base.classes.players
     FantasyTeam = Base.classes.fantasyteam
-
-
-def team_update(team, otherTeam, gameID, teamID, frameTS, teamFirstBlood):
-    team['dragons'] = len(team['dragons'])
-    team['gameid'] = gameID
-    team['teamid'] = teamID
-    team['frame_ts'] = frameTS
-    team['first_blood'] = team['totalKills'] == 1 and otherTeam['totalKills'] == 0 or teamFirstBlood
-    team['win'] = False
-    team['under_30'] = False
-    return team
-
-
-def player_update(players, enemyPlayers, killTracker, teamKills, prevTeamKills, frameTS, gameID):
-    for player in players:
-        participantID = player['participantId']
-        
-        # logging.info(participantID)
-        
-        killTracker[participantID]['currentHealth'] = player['currentHealth']
-        killTracker[participantID]['kills'] = player['kills']
-
-        killTracker[participantID] = multikill(participantID,
-            killTracker[participantID], enemyPlayers, teamKills, prevTeamKills, frameTS)
-        player.update(killTracker[participantID])
-
-        player['fantasy_score'] = fantasy_player_scoring(player)
-        player['gameid'] = gameID
-        player['timestamp'] = frameTS
-        killTracker[participantID]['prevKills'] = player['kills']
-    return players, killTracker
 
 
 def insert_predictions(engine, Base, teams, blockName, tournamentID, serverID, discordName, gameIDs):
@@ -790,9 +545,10 @@ def update_winners(Base, engine):
         Tournaments.iscurrent).filter(Tournaments.leagueid == 98767991299243165)
 
     for tournament in current_tournaments:
-        games = session.query(Tournament_Schedule).filter(Tournament_Schedule.tournamentid==tournament.tournamentid)
+        games = session.query(Tournament_Schedule).filter(
+            Tournament_Schedule.tournamentid == tournament.tournamentid)
         for game in games:
-           game.winner_code = get_winner(tournament.leagueid, game.matchid)
+            game.winner_code = get_winner(tournament.leagueid, game.matchid)
 
 
 def get_winner(leagueID, matchID):
@@ -819,213 +575,224 @@ def live_data_check(start_time, live_data=False):
         sleep(10 - loopTime)
 
 
-def player_data_processing(player_data, participants_details):
-    player_columns = ['gameid', 'participantId', 'timestamp', 'kills', 'deaths',
-                      'assists', 'creepScore', 'fantasy_score', 'summoner_name', 'role', 'level',
-                      'totalGoldEarned', 'killParticipation', 'championDamageShare',
-                      'wardsPlaced', 'wardsDestroyed', 'attackDamage', 'abilityPower',
-                      'criticalChance', 'attackSpeed', 'lifeSteal', 'armor', 'magicResistance',
-                      'tenacity']
-    map_columns = {'gameid': 'gameid', 'participantId': 'participantid',
-                   'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
-                   'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
-                   'summoner_name': 'summoner_name', 'role': 'role', 'totalGoldEarned': 'total_gold_earned',
-                   'killParticipation': 'kill_participation', 'championDamageShare': 'champion_damage_share',
-                   'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed',
-                   'attackDamage': 'attack_damage', 'abilityPower': 'ability_power',
-                   'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal',
-                   'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity'}
+async def pandas_gamedata(gameID, leagueID, engine):
+    """ Parses gamedata, makes asyncronous API calls, vectorized processing
 
-    player_data = player_data.merge(participants_details, on=[
-        'timestamp', 'participantId', 'kills', 'deaths', 'assists', 'creepScore', 'level'])
-    player_data[['code', 'summoner_name']] = player_data['summonerName'].str.split(
-        ' ', 1, expand=True)
-    player_data = player_data[player_columns]
-    player_data.drop_duplicates(
-        subset=["summoner_name", "gameid", "timestamp"], inplace=True)
-    player_data.rename(columns=map_columns, inplace=True)
-    return player_data
+    Args:
+        gameID (int): unique ID for League of Legends eSports game
+        leagueID (int): unique ID for League of Legends eSports league
+    """
+    start_time = time.time()
 
-def pandas_gamedata(gameID):
-
-    team_columns = ['gameid', 'teamid', 'frame_ts', 'dragons', 'barons',
-                    'towers', 'first_blood', 'under_30', 'win', 'fantasy_score']
+    rename_columns = {'gameid': 'gameid', 'participantId': 'participantid',
+                      'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
+                      'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
+                      'summoner_name': 'summoner_name', 'role': 'role', 'totalGoldEarned': 'total_gold_earned',
+                      'killParticipation': 'kill_participation', 'championDamageShare': 'champion_damage_share',
+                      'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed',
+                      'attackDamage': 'attack_damage', 'abilityPower': 'ability_power',
+                      'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal',
+                      'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity', "kill_1.0": "single", 
+                      "kill_2.0": "double", "kill_3.0": "triple", "kill_4.0": "quadra", "kill_5.0": "penta", 
+                      "perkMetadata.perks": "runes", "abilities": "abilities"}
 
     logging.info(f"Starting game {gameID}")
-    
+
     participants, teams, participants_details = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-    
-    dont_stop = False
-    timestamp = "2020-01-26T01:07:30Z"
-    date_time_obj =datetime.strptime(
-                    timestamp, '%Y-%m-%dT%H:%M:%SZ')
-    
-    # Catch if api throws error
-    while dont_stop:
-        try:
-            temp_metadata, temp_participants, temp_teams, matchID = lolesports.getWindow(
-                gameID, timestamp)
-        except Exception as error:
-            logging.info(f"{error} - {timestamp} - {gameID}")
-            # live_data_check(start_time, live_data)
-        try:
-            temp_participants_details = lolesports.getDetails(gameID)            
-        except Exception as error:
-            logging.info(error)
-        participants = pd.concat([participants, temp_participants], ignore_index=True)
-        participants_details = pd.concat([participants_details, temp_participants_details], ignore_index=True)
-        teams = pd.concat([teams, temp_teams], ignore_index=True)
 
-        date_time_obj += timedelta(seconds=10)
-        timestamp = date_time_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
-        print(timestamp)
-        if "finished" in temp_teams['gameState'].unique():
-            break
-    
-    participants = pd.read_pickle('./participants.pkl')
-    participants_details = pd.read_pickle('./participants_details.pkl')
-    teams = pd.read_pickle('./teams.pkl')
-    
-    # Start processing frame data
-    teams['num_dragons'] = len(teams['dragons'])
-    teams['gameid'] = gameID
-    teams['win'] = False
-    teams['under_30'] = False
-    
-    participants.sort_values(['timestamp', 'participantId'], ignore_index=True, inplace=True)
-    participants['multikill'] = 1    
-    
-    participants['kill_event'] = participants.groupby('participantId')['kills'].diff().fillna(0).astype(bool)
-    
-    participants.loc[(participants['kill_event']==True), 'kill_count'] = 1
-    
-    participants.loc[participants['kill_event']==True, 'kill_timeout'] = participants[participants['kill_event']==True].groupby('participantId')['timestamp'].diff().fillna(pd.Timedelta(0, unit='S'))
+    # Calculates the number of 10s periods for the duration of the game
+    _, _, x, _ = lolesports.getWindow(gameID)
+    timestamp = x["timestamp"].min().to_pydatetime()
+    timestamp = round_time(timestamp)
     
     
-    participants.loc[(participants['kill_event']==True) & (participants['kill_timeout'] > timedelta(seconds=30)), 'kill_reset'] = 1
+    temp_max_ts = timestamp + timedelta(days=1)
+    temp_max_ts = temp_max_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+    _, _, x, _ = lolesports.getWindow(gameID, temp_max_ts)
+    max_ts = x["timestamp"].max().to_pydatetime()
+    max_ts = round_time(max_ts)
+    
+    num_periods = round((max_ts - timestamp).total_seconds() / 10)
+
+    logging.info(f"Making getWindow calls")
+    # Completes getWindow API calls asynchronously
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(
+                executor,
+                lolesports.getWindow,
+                *(gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+            )
+            for i in range(num_periods)
+            ]
+        for response in await asyncio.gather(*tasks):
+            participants = pd.concat([participants, response[1]], ignore_index=True)
+            teams = pd.concat([teams, response[2]], ignore_index=True)
+            matchID = response[3]
+
+    logging.info(f"Making getDetails calls")
+    # Compeletes getDetails API calls asynchronously
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(
+                executor,
+                lolesports.getDetails,
+                *(gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+            )
+            for i in range(num_periods)
+            ]
+        for response in await asyncio.gather(*tasks):            
+            participants_details = pd.concat([participants_details, response], ignore_index=True)
+            
+    # Sort dataframes by timestamp
+    participants.sort_values(
+        ['timestamp', 'participantId'], ignore_index=True, inplace=True)
+    teams.sort_values(
+        ['timestamp'], ignore_index=True, inplace=True)
+    participants_details.sort_values(
+        ['timestamp', 'participantId'], ignore_index=True, inplace=True)
+    
+    participants['multikill'] = 1
+
+    # The next bunch of code is a bunch of messy vectorization, to determine when double, triples, quadras, pentas happen
+
+    # Determine which frame a kill happens at
+    participants['kill_event'] = participants.groupby(
+        'participantId')['kills'].diff().fillna(0).astype(bool)
+
+
+    participants.loc[(participants['kill_event']), 'kill_count'] = 1
+
+    # Calculates the time inbetween kills
+    participants.loc[participants['kill_event'], 'kill_timeout'] = participants[participants['kill_event']].groupby(
+        'participantId')['timestamp'].diff().fillna(pd.Timedelta(0, unit='S'))
+
+    # First pass detection for when kills need reset
+    # Since single, double, triple, quadra have the same requirements and penta's are different 
+    participants.loc[(participants['kill_event']) & (
+        participants['kill_timeout'] > timedelta(seconds=30)), 'kill_reset'] = 1
+
     participants['kill_reset'].fillna(0, inplace=True)
-    
-    
-    
-    participants['cumsum'] = participants[participants['kill_event']==True].groupby('participantId')['kill_reset'].cumsum()    
-    participants['multikill'] = participants[participants['kill_event']==True].groupby(['participantId', 'cumsum'])['kill_count'].cumsum()
 
-    participants['max_health'] = participants.groupby(['timestamp', 'code'])['currentHealth'].transform(max)
+    participants['cumsum'] = participants[participants['kill_event']].groupby(
+        'participantId')['kill_reset'].cumsum()
+
+    participants['multikill'] = participants[participants['kill_event']].groupby(
+        ['participantId', 'cumsum'])['kill_count'].cumsum()
+
+    # Checks to see if any player on the othe
+
+    # Gets the max current health at each timestamp for each team
+    participants['max_health'] = participants.groupby(
+        ['timestamp', 'code'])['currentHealth'].transform(max)
     df = participants[['timestamp', 'code', 'max_health']].copy()
-    participants.drop('max_health', axis=1, inplace=True)
+    participants.drop('max_health', inplace=True)
+
+    # Swaps the codes
     code_1 = df['code'].unique()[0]
     code_2 = df['code'].unique()[1]
-    df['code'] = df['code'].map({code_1:code_2, code_2: code_1})
+    df['code'] = df['code'].map({code_1: code_2, code_2: code_1})
+
+    # Add to participant dataframe 
     participants = pd.merge(participants, df, on=['timestamp', 'code'])
     participants.drop_duplicates(inplace=True)
-    participants.sort_values(['timestamp', 'participantId'], ignore_index=True, inplace=True)
 
-    participants.loc[(participants['kill_event']==True) & (participants['multikill'] <= 4) & (participants['kill_timeout'] > timedelta(seconds=10)), 'kill_reset'] = 1
-    participants.loc[(participants['kill_event']==True) & (participants['multikill'] == 5) & ((participants['kill_timeout'] > timedelta(seconds=30)) | (participants['max_health'] > 0)), 'kill_reset'] = 1
+    # Second pass resets
+    # Single, double, triple, quadra resets
+    # If the time inbetween kills has been more than 10s 
+    participants.loc[(participants['kill_event']) & (participants['multikill'] <= 4) & (
+        participants['kill_timeout'] > timedelta(seconds=10)), 'kill_reset'] = 1
     
+    # Penta reset
+    # If time inbetween kills has been more than 30s or someone on the enemy team has respawned
+    participants.loc[(participants['kill_event']) & (participants['multikill'] == 5) & (
+        (participants['kill_timeout'] > timedelta(seconds=30)) | (participants['max_health'] > 0)), 'kill_reset'] = 1
 
-    participants['cumsum'] = participants[participants['kill_event']==True].groupby('participantId')['kill_reset'].cumsum()    
-    participants['multikill'] = participants[participants['kill_event']==True].groupby(['participantId', 'cumsum'])['kill_count'].cumsum()
+    # I forget how this works again hahaha
+    participants['cumsum'] = participants[participants['kill_event']].groupby(
+        'participantId')['kill_reset'].cumsum()
+
+    participants['multikill'] = participants[participants['kill_event']].groupby(
+        ['participantId', 'cumsum'])['kill_count'].cumsum()
+    
     participants['multikill'].fillna(0, inplace=True)
-    participants.drop(['max_health', 'cumsum', 'kill_event', 'kill_count', 'kill_timeout', 'kill_reset'], axis=1, inplace=True)
 
-    print(participants)
+    # Onehot encode the multikills, 1 -> single, 2 -> double, 3 -> triple, 4 -> quadra, 5 -> penta
+    participants = pd.get_dummies(participants, "kill", columns=['multikill'])
     
+    # Merge participant_details
+    participants = participants.merge(participants_details, on=[
+        'timestamp', 'participantId', 'kills', 'deaths', 'assists', 'creepScore', 'level', 'rfc460Timestamp'])
+
+    # Clean up participant dataframe, rename columns, sort, drop extra columns 
+    participants.rename(columns=rename_columns, inplace=True)
+    participants_details.sort_values(['timestamp', 'participantId'], inplace=True)
+    player_drop_columns = set(participants.columns.values) - set(rename_columns.values())
+    participants.drop(player_drop_columns, axis=1, inplace=True)
     
+    # cumulative sum for onehot encoded multikills
+    multikill_columns = ['single', 'double', 'triple', 'quadra', 'penta']
+
+    for column in multikill_columns:
+        if column not in participants:
+            participants[column] = 0
+        participants[column].cumsum()
+
+    # Calculate fantasy score
+    player_weight_columns = ['kills', 'deaths', 'assists',
+                             'creep_score', 'triple', 'quadra', 'penta']
+    player_weights = pd.DataFrame(
+        {"weights": [2.0, -0.5, 1.5, 0.01, 2, 5, 10]}, index=player_weight_columns)
+
+    participants['fantasy_score'] = participants[player_weight_columns].dot(
+        player_weights)
+
+    # Teams
+    # Basic info
+    teams['num_dragons'] = teams['dragons'].str.len()
+    teams['win'] = 0
+    teams['under_30'] = 0
+
+    # Some messy vectorization
+    # Determine when first blood happens
+    teams['first_blood'] = np.nan
     
-        
-            # Checks if game is paused
-            
-            # Initializes some variables at the start of the game
-            #   Timestamp of game start
-            #   kill tracker for multikills
-        #     for player in blue_players:
-        #             kill_tracker[player['participantId']] = {
-        #                 'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
+    # Determine when kills happen  
+    teams['kill_event'] = teams.groupby(
+        'code')['totalKills'].diff().fillna(0).astype(bool)
+    
+    # Determine when first blood happens
+    teams.loc[(teams['kill_event']) & (teams[teams['kill_event']]['timestamp']
+                                       == teams[teams['kill_event']]['timestamp'].min()), 'first_blood'] = 1
 
-        #         for player in red_players:
-        #             kill_tracker[player['participantId']] = {
-        #                 'killCount': 0, 'currentHealth': player['currentHealth'], 'killTS': startTS, 'kills': 0, 'double': 0, 'triple': 0, 'quadra': 0, 'penta': 0, 'prevKills': 0}
+    # Set first blood for team in future timestamps
+    teams.loc[(teams['code'] == teams[teams['first_blood'] == 1]['code'].iloc[0]) & (
+        teams['timestamp'] > teams[teams['first_blood'] == 1]['timestamp'].min()), 'first_blood'] = 1
+    teams['first_blood'].fillna(0, inplace=True)
 
-        #     blue_players, kill_tracker = player_update(
-        #         blue_players, red_players, kill_tracker, blue_team['totalKills'], blue_prev_kills, frameTS, gameID)
-        #     red_players, kill_tracker = player_update(
-        #         red_players, blue_players, kill_tracker, red_team['totalKills'], red_prev_kills, frameTS, gameID)
+    winner_code = get_winner(leagueID, matchID)
 
-        #     blue_team = team_update(
-        #         blue_team, red_team, gameID, blue_team_ID, frameTS, blue_first_blood)
-        #     red_team = team_update(
-        #         red_team, blue_team, gameID, red_team_ID, frameTS, red_first_blood)
+    # Determine if game won in under 30
+    teams.loc[(teams['code'] == winner_code) & (
+        teams['gameState'] == 'finished'), 'win'] = 1
+    teams.loc[(teams['win'] == 1) & (teams.timestamp.max() -
+                                     teams.timestamp.min() < timedelta(minutes=30)), 'under_30'] = 1
+    
+    # Calculate fantasy score
+    team_weight_columns = ['num_dragons', 'barons',
+                           'towers', 'first_blood', 'win', 'under_30']
+    team_weights = pd.DataFrame(
+        {"weights": [1.0, 2.0, 1.0, 2.0, 2.0, 2.0]}, index=team_weight_columns)
+    teams['fantasy_score'] = teams[team_weight_columns].dot(team_weights)
 
-        #     if blue_team['first_blood']:
-        #         blue_first_blood = True
-            
-        #     if red_team['first_blood']:
-        #         red_first_blood = True
+    # Final dataframe clean up, rename columns, drop extra
+    team_rename_columns = {'gameState': 'game_state', 'totalGold': 'total_gold', 'totalKills': 'total_kills'}
+    teams.rename(columns=team_rename_columns, inplace=True)
+    teams.drop('kill_event', axis=1, inplace=True)
 
-        #     # Checks which team won
-        #     if state == "finished":
+    participants.to_sql("player_gamedata", engine, "midbot", 'append', False)
+    teams.to_sql("team_gamedata", engine, "midbot", 'append', False)
 
-        #         winner_code = get_winner(leagueID, matchID)
-
-        #         session = Session(engine)
-        #         Tournament_Schedule = Base.classes.tournament_schedule
-        #         game = session.query(Tournament_Schedule).filter(
-        #             Tournament_Schedule.gameid == gameID).first()
-        #         game.state = state
-
-        #         blue_team['win'] = blue_code == winner_code
-        #         red_team['win'] = red_code == winner_code
-
-        #         endTS = datetime.strptime(
-        #             frame['rfc460Timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        #         if blue_team['win']:
-        #             blue_team['under_30'] = endTS - \
-        #                 startTS < timedelta(minutes=30)
-        #         else:
-        #             red_team['under_30'] = endTS - \
-        #                 startTS < timedelta(minutes=30)
-        #         game.winner_code = winner_code
-        #         logging.info(
-        #             f"game id: {gameID} - block:{game.blockname} - winner: {game.winner_code}")
-        #         session.commit()
-
-        #     blue_team['fantasy_score'] = fantasy_team_scoring(blue_team)
-        #     red_team['fantasy_score'] = fantasy_team_scoring(red_team)
-
-        #     teams = teams[team_columns]
-
-        #     team_data = pd.concat([team_data, teams], ignore_index=True)
-            
-        # player_data = player_data_processing(player_data, participants_details)
-
-        # team_data.drop_duplicates(
-        #     subset=["gameid", "teamid", "frame_ts"], inplace=True)
-        
-        # logging.debug("Inserting")
-        # player_data.to_sql("player_gamedata", engine,
-        #                    if_exists='append', index=False, method='multi', schema='midbot')
-        # team_data.to_sql("team_gamedata", engine,
-        #                  if_exists='append', index=False, method='multi', schema='midbot')
-
-        # live_data_check(start_time, live_data)
-
-def intervaled_cumsum(a, trigger_val=1, start_val = 0, invalid_specifier=0):
-    out = np.ones(a.size,dtype=int)    
-    idx = np.flatnonzero(a==trigger_val)
-    if len(idx)==0:
-        return np.full(a.size,invalid_specifier)
-    else:
-        out[idx[0]] = -idx[0] + 1
-        out[0] = start_val
-        out[idx[1:]] = idx[:-1] - idx[1:] + 1
-        np.cumsum(out, out=out)
-        out[:idx[0]] = invalid_specifier
-        return out
-
-if __name__ == "__main__":
-    # Base, engine = connect_database()
-    # update_winners(Base, engine)
-    # update_predictions(engine)
-    # print()
-    pandas_gamedata(103462440145619680)
+    print(f"Game: {gameID} - Clock {time.time()- start_time}")

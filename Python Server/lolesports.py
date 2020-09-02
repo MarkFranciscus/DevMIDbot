@@ -224,6 +224,8 @@ def getWindow(gameID, starting_time=""):
             [blue_participants, red_participants], ignore_index=True)
         participants = pd.merge(participants, metadata, on='participantId')
         participants['timestamp'] = pd.to_datetime(participants['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+        participants["gameid"] = gameID
+        teams['gameid'] = gameID
         participants.drop('summonerName', axis=1, inplace=True)
         
         matchID = raw_data['esportsMatchId']

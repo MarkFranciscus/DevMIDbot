@@ -224,6 +224,14 @@ CREATE TABLE midbot.player_gamedata (
 	armor int4 NULL,
 	magic_resistance int4 NULL,
 	tenacity numeric NULL,
+	single int4 NULL,
+	double int4 NULL,
+	triple int4 NULL,
+	quadra int4 NULL,
+	penta int4 NULL,
+	rfc460Timestamp text NULL,
+	runes int4[] NULL,
+	abilities TEXT[] NULL,
 	CONSTRAINT player_gamedata_pkey PRIMARY KEY (gameid, summoner_name, "timestamp"),
 	CONSTRAINT player_gamedata_fk FOREIGN KEY (gameid) REFERENCES tournament_schedule(gameid)
 );
