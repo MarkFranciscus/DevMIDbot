@@ -13,6 +13,7 @@ from difflib import SequenceMatcher
 from time import sleep
 from timeit import default_timer
 
+from aiohttp import ClientSession
 import dateutil.parser
 import numpy as np
 import pandas as pd
@@ -383,7 +384,7 @@ def database_update_teams(engine):
     newTeams.to_sql("teams", engine, if_exists='append',  index=False)
 
 
-def database_insert_gamedata(engine, Base):
+def database_insert_gamedata(engine, Base, tournamentID):
     session = Session(engine)
     Tournament_Schedule = Base.classes.tournament_schedule
     Tournaments = Base.classes.tournaments
@@ -393,14 +394,20 @@ def database_insert_gamedata(engine, Base):
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.now()
-    gameid_result = session.query(Tournaments.leagueid, Tournament_Schedule.tournamentid, Tournament_Schedule.gameid,
-                                  Tournament_Schedule.start_ts, Tournament_Schedule.state).join(
+    gameid_result = session.query(Tournament_Schedule.gameid, Tournament_Schedule.leagueid).join(
                                       Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
-                                          Tournament_Schedule.tournamentid == 104174992692075107, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
-    for row in gameid_result:
-        logging.info(row)
-        parse_gamedata(engine, Base, row.leagueid,
-                       row.tournamentid, row.gameid, row.start_ts)
+                                          Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+    
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(
+                executor,
+                parse_gamedata,
+                *(row.gameid, row.leagueid, engine)
+            )
+            for row in gameid_result
+            ]
 
 
 def get_fantasy_league_table(engine, Base, serverid, tournamentid=103462439438682788):
@@ -575,7 +582,7 @@ def live_data_check(start_time, live_data=False):
         sleep(10 - loopTime)
 
 
-async def pandas_gamedata(gameID, leagueID, engine):
+async def parse_gamedata(gameID, leagueID, engine):
     """ Parses gamedata, makes asyncronous API calls, vectorized processing
 
     Args:
@@ -601,14 +608,16 @@ async def pandas_gamedata(gameID, leagueID, engine):
     participants, teams, participants_details = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     # Calculates the number of 10s periods for the duration of the game
-    _, _, x, _ = lolesports.getWindow(gameID)
+    async with ClientSession() as session:
+        _, _, x, _ = await lolesports.getWindow(session, gameID)
     timestamp = x["timestamp"].min().to_pydatetime()
     timestamp = round_time(timestamp)
     
     
     temp_max_ts = timestamp + timedelta(days=1)
     temp_max_ts = temp_max_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
-    _, _, x, _ = lolesports.getWindow(gameID, temp_max_ts)
+    async with ClientSession() as session:
+        _, _, x, _ = await lolesports.getWindow(session, gameID, temp_max_ts)
     max_ts = x["timestamp"].max().to_pydatetime()
     max_ts = round_time(max_ts)
     
@@ -616,15 +625,11 @@ async def pandas_gamedata(gameID, leagueID, engine):
 
     logging.info(f"Making getWindow calls")
     # Completes getWindow API calls asynchronously
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        loop = asyncio.get_event_loop()
+    # with ThreadPoolExecutor(max_workers=10) as executor:
+    async with ClientSession() as session:
         tasks = [
-            loop.run_in_executor(
-                executor,
-                lolesports.getWindow,
-                *(gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ"))
-            )
-            for i in range(num_periods)
+                asyncio.ensure_future(lolesports.getWindow(session, gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ")))
+                for i in range(num_periods)
             ]
         for response in await asyncio.gather(*tasks):
             participants = pd.concat([participants, response[1]], ignore_index=True)
@@ -633,15 +638,10 @@ async def pandas_gamedata(gameID, leagueID, engine):
 
     logging.info(f"Making getDetails calls")
     # Compeletes getDetails API calls asynchronously
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        loop = asyncio.get_event_loop()
+    async with ClientSession() as session:
         tasks = [
-            loop.run_in_executor(
-                executor,
-                lolesports.getDetails,
-                *(gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ"))
-            )
-            for i in range(num_periods)
+                asyncio.ensure_future(lolesports.getDetails(session, gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ")))
+                for i in range(num_periods)
             ]
         for response in await asyncio.gather(*tasks):            
             participants_details = pd.concat([participants_details, response], ignore_index=True)
@@ -687,8 +687,9 @@ async def pandas_gamedata(gameID, leagueID, engine):
     # Gets the max current health at each timestamp for each team
     participants['max_health'] = participants.groupby(
         ['timestamp', 'code'])['currentHealth'].transform(max)
+    # print(participants.columns.values)
     df = participants[['timestamp', 'code', 'max_health']].copy()
-    participants.drop('max_health', inplace=True)
+    participants.drop('max_health', axis=1, inplace=True)
 
     # Swaps the codes
     code_1 = df['code'].unique()[0]
@@ -796,3 +797,7 @@ async def pandas_gamedata(gameID, leagueID, engine):
     teams.to_sql("team_gamedata", engine, "midbot", 'append', False)
 
     print(f"Game: {gameID} - Clock {time.time()- start_time}")
+
+if __name__ == "__main__":
+    engine, Base = connect_database()
+    database_insert_gamedata(engine, Base, 104174992692075107)

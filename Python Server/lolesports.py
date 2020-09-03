@@ -1,9 +1,11 @@
 import datetime
 import json
 import time
+import asyncio
 
 import pandas as pd
 import requests
+from aiohttp import ClientSession
 from pandas import json_normalize
 
 import utility
@@ -172,13 +174,12 @@ def getGames():
     pass
 
 
-def getWindow(gameID, starting_time=""):
+async def getWindow(session, gameID, starting_time=""):
     params = {'startingTime': starting_time}
-    r = requests.get(
-        "https://feed.lolesports.com/livestats/v1/window/{}".format(gameID), params=params)
-    # r.encoding = 'utf-8'
-    if r.status_code == 200:
-        raw_data = json.loads(r.text)
+    # r = requests.get(
+    #     "https://feed.lolesports.com/livestats/v1/window/{}".format(gameID), params=params)
+    async with session.get(f"https://feed.lolesports.com/livestats/v1/window/{gameID}", params=params, raise_for_status=True) as response:
+        raw_data = await response.json()
 
         blue_teamID = raw_data['gameMetadata']['blueTeamMetadata']['esportsTeamId']
         blue_metadata = json_normalize(
@@ -230,9 +231,6 @@ def getWindow(gameID, starting_time=""):
         
         matchID = raw_data['esportsMatchId']
         return metadata, participants, teams, matchID
-    else:
-        raise Exception(f"getWindow giving status code {r.status_code}")
-
 
 def navItems():
     pass
@@ -256,27 +254,14 @@ def format_standing_list(standings):
     return [temp[i] for i in range(1, 11)]
 
 
-def getDetails(gameId, timestamp="", participantIds=""):
+async def getDetails(session, gameID, timestamp="", participantIds=""):
     params = {'startingTime': timestamp,
               'participantIds': participantIds}
-    r = requests.get(
-        "https://feed.lolesports.com/livestats/v1/details/{}".format(gameId), params=params)
-    rawData = json.loads(r.text)
-    frames = rawData["frames"]
-    
-    participant_data = json_normalize(frames, 'participants', 'rfc460Timestamp')
-    participant_data['timestamp'] = pd.to_datetime(participant_data['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
-    return participant_data
+    async with session.get(f"https://feed.lolesports.com/livestats/v1/details/{gameID}", params=params, raise_for_status=True) as response:
+        raw_data = await response.json()
 
-
-# if __name__ == "__main__":
-    # get_teams()
-    # import time, utility
-    # startTime = time.time()
-
-#####your python script#####
-    
-    # getWindow(103462440145619680)
-    # getDetails(103462440145619680)
-    # executionTime = (time.time() - startTime)
-    # print('Execution time in seconds: ' + str(executionTime))
+        frames = raw_data["frames"]
+        
+        participant_data = json_normalize(frames, 'participants', 'rfc460Timestamp')
+        participant_data['timestamp'] = pd.to_datetime(participant_data['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+        return participant_data
