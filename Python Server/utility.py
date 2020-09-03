@@ -805,7 +805,7 @@ async def parse_gamedata(gameID, leagueID, engine):
 
     teams.rename(columns=team_rename_columns, inplace=True)
     teams.drop('kill_event', axis=1, inplace=True)
-    teams = teams.astype({'win': 'bool', 'first_blood': 'bool', 'under_30': ' bool'})
+    teams = teams.astype({'win': 'bool', 'first_blood': 'bool', 'under_30': 'bool'})
 
 
     participants.drop_duplicates(
