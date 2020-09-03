@@ -602,12 +602,17 @@ async def parse_gamedata(gameID, leagueID, engine):
                              'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
                              'summoner_name': 'summoner_name', 'role': 'role', 'totalGoldEarned': 'total_gold_earned',
                              'killParticipation': 'kill_participation', 'championDamageShare': 'champion_damage_share',
-                             'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed',
-                             'attackDamage': 'attack_damage', 'abilityPower': 'ability_power',
+                             'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed', 'level': 'level',
+                             'attackDamage': 'attack_damage', 'abilityPower': 'ability_power', 'items': 'items',
                              'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal',
                              'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity', "kill_1.0": "single",
                              "kill_2.0": "double", "kill_3.0": "triple", "kill_4.0": "quadra", "kill_5.0": "penta",
                              "perkMetadata.perks": "runes", "abilities": "abilities", "rfc460Timestamp": "rfc460timestamp"}
+    team_rename_columns = {'rfc460Timestamp': 'rfc460timestamp', 'gameState': 'game_state', 'totalGold': 'total_gold', 
+                           'inhibitors': 'inhibitors', 'towers': 'towers', 'barons': 'barons', 'totalKills': 'total_kills',
+                           'dragons': 'dragons', 'teamID': 'teamid', 'side': 'side', 'code': 'code', 'timestamp': 'timestamp',
+                           'gameid': 'gameid', 'num_dragons': 'num_dragons', 'win': 'win', 'under_30': 'under_30', 
+                           'first_blood': 'first_blood', 'fantasy_score': 'fantasy_score'}
 
     logging.info(f"Starting game {gameID}")
 
@@ -799,10 +804,6 @@ async def parse_gamedata(gameID, leagueID, engine):
     teams['fantasy_score'] = teams[team_weight_columns].dot(team_weights)
 
     # Final dataframe clean up, rename columns, drop extra
-    team_rename_columns = {'rfc460Timestamp': 'rfc460timestamp', 'gameState': 'game_state', 'totalGold': 'total_gold', 'inhibitors': 'inhibitors', 'towers': 'towers',
-                           'barons': 'barons', 'totalKills': 'total_kills', 'dragons': 'dragons', 'teamID': 'teamid', 'side': 'side', 'code': 'code', 'timestamp': 'timestamp',
-                           'gameid': 'gameid', 'num_dragons': 'num_dragons', 'win': 'win', 'under_30': 'under_30', 'first_blood': 'first_blood', 'fantasy_score': 'fantasy_score'}
-
     teams.rename(columns=team_rename_columns, inplace=True)
     teams.drop('kill_event', axis=1, inplace=True)
     teams = teams.astype({'win': 'bool', 'first_blood': 'bool', 'under_30': 'bool'})
