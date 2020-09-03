@@ -190,7 +190,7 @@ async def getWindow(session, gameID, starting_time=""):
             raw_data['gameMetadata']['redTeamMetadata']['participantMetadata'])
 
         metadata = pd.concat([blue_metadata, red_metadata], ignore_index=True)
-        metadata[['code', 'summoner_name']] = metadata['summonerName'].str.split(expand=True)
+        metadata[['code', 'summoner_name']] = metadata['summonerName'].str.split(expand=True, n=1)
         
         red_team = json_normalize(raw_data['frames'], meta=[
                                   'redTeam', 'rfc460Timestamp', 'gameState'])

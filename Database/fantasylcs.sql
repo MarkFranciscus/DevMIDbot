@@ -265,18 +265,27 @@ CREATE TABLE midbot.players (
 -- Drop table
 
 -- DROP TABLE midbot.team_gamedata;
-
+['rfc460Timestamp' 'game_state' 'total_gold' 'inhibitors' 'towers'
+ 'barons' 'total_kills' 'dragons' 'teamID' 'side' 'code' 'timestamp'
+ 'gameid' 'num_dragons' 'win' 'under_30' 'first_blood' 'fantasy_score']
 CREATE TABLE midbot.team_gamedata (
 	gameid int8 NOT NULL,
 	teamid int8 NOT NULL,
-	frame_ts timestamp NOT NULL,
-	dragons int4 NULL,
+	game_state TEXT NULL,
+	side TEXT NULL,
+	code TEXT NULL,
+	"timestamp" timestamp NOT NULL,
+	total_gold int8 NULL,
+	dragons text[] NULL,
+	num_dragons int4 NULL,
 	barons int4 NULL,
 	towers int4 NULL,
+	inhibitors int4 NULL,
 	first_blood bool NULL,
 	under_30 bool NULL,
 	win bool NULL,
 	fantasy_score numeric NULL,
+	rfc460Timestamp text NULL,
 	CONSTRAINT team_gamedata_pkey PRIMARY KEY (gameid, teamid, frame_ts),
 	CONSTRAINT team_gamedata_fk FOREIGN KEY (gameid) REFERENCES tournament_schedule(gameid)
 );
