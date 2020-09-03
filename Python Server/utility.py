@@ -629,7 +629,7 @@ async def parse_gamedata(gameID, leagueID, engine):
     async with ClientSession() as session:
         _, _, x, _ = await lolesports.getWindow(session, gameID, temp_max_ts)
     
-    if not teams["gameState"].str.contains('finished').any():
+    if not x["gameState"].str.contains('finished').any():
         return
 
     max_ts = x["timestamp"].max().to_pydatetime()
