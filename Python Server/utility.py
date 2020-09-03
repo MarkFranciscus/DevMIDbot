@@ -6,7 +6,7 @@ import os
 import pickle
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
@@ -384,7 +384,7 @@ def database_update_teams(engine):
     newTeams.to_sql("teams", engine, if_exists='append',  index=False)
 
 
-def database_insert_gamedata(engine, Base, tournamentID):
+async def database_insert_gamedata(engine, Base, tournamentID):
     session = Session(engine)
     Tournament_Schedule = Base.classes.tournament_schedule
     Tournaments = Base.classes.tournaments
@@ -398,16 +398,22 @@ def database_insert_gamedata(engine, Base, tournamentID):
                                       Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
                                           Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
     
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(
-                executor,
-                parse_gamedata,
-                *(row.gameid, row.leagueid, engine)
-            )
-            for row in gameid_result
-            ]
+    for row in gameid_result:
+        await  parse_gamedata(row.gameid, row.leagueid, engine)
+
+    # with ThreadPoolExecutor(max_workers=10) as executor:
+    #         loop = asyncio.get_event_loop()
+    #         START_TIME = default_timer()
+    #         tasks = [
+    #             loop.run_in_executor(
+    #                 executor,
+    #                 await parse_gamedata,
+    #                 *(row.gameid, row.leagueid, engine)
+    #             )
+    #             for row in gameid_result
+    #         ]
+    #         for response in await asyncio.gather(*tasks):
+    #             pass
 
 
 def get_fantasy_league_table(engine, Base, serverid, tournamentid=103462439438682788):
@@ -590,7 +596,7 @@ async def parse_gamedata(gameID, leagueID, engine):
         leagueID (int): unique ID for League of Legends eSports league
     """
     start_time = time.time()
-
+    print(f"parsing {gameID}")
     rename_columns = {'gameid': 'gameid', 'participantId': 'participantid',
                       'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
                       'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
@@ -800,4 +806,7 @@ async def parse_gamedata(gameID, leagueID, engine):
 
 if __name__ == "__main__":
     engine, Base = connect_database()
-    database_insert_gamedata(engine, Base, 104174992692075107)
+    loop = asyncio.get_event_loop()
+    future = asyncio.ensure_future(database_insert_gamedata(engine, Base, 104174992692075107))
+    loop.run_until_complete(future)
+    
