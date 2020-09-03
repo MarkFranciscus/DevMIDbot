@@ -229,11 +229,11 @@ CREATE TABLE midbot.player_gamedata (
 	triple int4 NULL,
 	quadra int4 NULL,
 	penta int4 NULL,
-	rfc460Timestamp text NULL,
+	rfc460timestamp text NULL,
 	runes int4[] NULL,
 	abilities TEXT[] NULL,
 	CONSTRAINT player_gamedata_pkey PRIMARY KEY (gameid, summoner_name, "timestamp"),
-	CONSTRAINT player_gamedata_fk FOREIGN KEY (gameid) REFERENCES tournament_schedule(gameid)
+	CONSTRAINT player_gamedata_fk FOREIGN KEY (gameid) REFERENCES midbot.tournament_schedule(gameid)
 );
 
 
@@ -265,9 +265,6 @@ CREATE TABLE midbot.players (
 -- Drop table
 
 -- DROP TABLE midbot.team_gamedata;
-['rfc460Timestamp' 'game_state' 'total_gold' 'inhibitors' 'towers'
- 'barons' 'total_kills' 'dragons' 'teamID' 'side' 'code' 'timestamp'
- 'gameid' 'num_dragons' 'win' 'under_30' 'first_blood' 'fantasy_score']
 CREATE TABLE midbot.team_gamedata (
 	gameid int8 NOT NULL,
 	teamid int8 NOT NULL,
@@ -276,6 +273,7 @@ CREATE TABLE midbot.team_gamedata (
 	code TEXT NULL,
 	"timestamp" timestamp NOT NULL,
 	total_gold int8 NULL,
+	total_kills int4 null,
 	dragons text[] NULL,
 	num_dragons int4 NULL,
 	barons int4 NULL,
@@ -285,7 +283,7 @@ CREATE TABLE midbot.team_gamedata (
 	under_30 bool NULL,
 	win bool NULL,
 	fantasy_score numeric NULL,
-	rfc460Timestamp text NULL,
-	CONSTRAINT team_gamedata_pkey PRIMARY KEY (gameid, teamid, frame_ts),
-	CONSTRAINT team_gamedata_fk FOREIGN KEY (gameid) REFERENCES tournament_schedule(gameid)
+	rfc460timestamp text NULL,
+	CONSTRAINT team_gamedata_pkey PRIMARY KEY (gameid, teamid, "timestamp"),
+	CONSTRAINT team_gamedata_fk FOREIGN KEY (gameid) REFERENCES midbot.tournament_schedule(gameid)
 );

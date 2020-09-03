@@ -348,7 +348,7 @@ def round_robin(teams):
 
 def round_time(dt=None, date_delta=timedelta(seconds=10), to='down'):
     """Round a datetime object to a multiple of a timedelta
-    
+
     Args:
         dt (datetime): datetime.datetime object, default now.
         date_delta (timedelta) : timedelta object, we round to a multiple of this, default 1 minute.
@@ -395,11 +395,11 @@ async def database_insert_gamedata(engine, Base, tournamentID):
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.now()
     gameid_result = session.query(Tournament_Schedule.gameid, Tournaments.leagueid).join(
-                                      Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
-                                          Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
-    
+        Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
+        Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+
     for row in gameid_result:
-        await  parse_gamedata(row.gameid, row.leagueid, engine)
+        await parse_gamedata(row.gameid, row.leagueid, engine)
 
     # with ThreadPoolExecutor(max_workers=10) as executor:
     #         loop = asyncio.get_event_loop()
@@ -597,17 +597,17 @@ async def parse_gamedata(gameID, leagueID, engine):
     """
     start_time = time.time()
     print(f"parsing {gameID}")
-    rename_columns = {'gameid': 'gameid', 'participantId': 'participantid',
-                      'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
-                      'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
-                      'summoner_name': 'summoner_name', 'role': 'role', 'totalGoldEarned': 'total_gold_earned',
-                      'killParticipation': 'kill_participation', 'championDamageShare': 'champion_damage_share',
-                      'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed',
-                      'attackDamage': 'attack_damage', 'abilityPower': 'ability_power',
-                      'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal',
-                      'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity', "kill_1.0": "single", 
-                      "kill_2.0": "double", "kill_3.0": "triple", "kill_4.0": "quadra", "kill_5.0": "penta", 
-                      "perkMetadata.perks": "runes", "abilities": "abilities", "rfc460Timestamp":"rfc460timestamp"}
+    rename_player_columns = {'gameid': 'gameid', 'participantId': 'participantid',
+                             'timestamp': 'timestamp', 'kills': 'kills', 'deaths': 'deaths',
+                             'assists': 'assists', 'creepScore': 'creep_score', 'fantasy_score': 'fantasy_score',
+                             'summoner_name': 'summoner_name', 'role': 'role', 'totalGoldEarned': 'total_gold_earned',
+                             'killParticipation': 'kill_participation', 'championDamageShare': 'champion_damage_share',
+                             'wardsPlaced': 'wards_placed', 'wardsDestroyed': 'wards_destroyed',
+                             'attackDamage': 'attack_damage', 'abilityPower': 'ability_power',
+                             'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal',
+                             'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity', "kill_1.0": "single",
+                             "kill_2.0": "double", "kill_3.0": "triple", "kill_4.0": "quadra", "kill_5.0": "penta",
+                             "perkMetadata.perks": "runes", "abilities": "abilities", "rfc460Timestamp": "rfc460timestamp"}
 
     logging.info(f"Starting game {gameID}")
 
@@ -618,15 +618,14 @@ async def parse_gamedata(gameID, leagueID, engine):
         _, _, x, _ = await lolesports.getWindow(session, gameID)
     timestamp = x["timestamp"].min().to_pydatetime()
     timestamp = round_time(timestamp)
-    
-    
+
     temp_max_ts = timestamp + timedelta(days=1)
     temp_max_ts = temp_max_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
     async with ClientSession() as session:
         _, _, x, _ = await lolesports.getWindow(session, gameID, temp_max_ts)
     max_ts = x["timestamp"].max().to_pydatetime()
     max_ts = round_time(max_ts)
-    
+
     num_periods = round((max_ts - timestamp).total_seconds() / 10)
 
     logging.info(f"Making getWindow calls")
@@ -634,11 +633,13 @@ async def parse_gamedata(gameID, leagueID, engine):
     # with ThreadPoolExecutor(max_workers=10) as executor:
     async with ClientSession() as session:
         tasks = [
-                asyncio.ensure_future(lolesports.getWindow(session, gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ")))
-                for i in range(num_periods)
-            ]
+            asyncio.ensure_future(lolesports.getWindow(
+                session, gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ")))
+            for i in range(num_periods)
+        ]
         for response in await asyncio.gather(*tasks):
-            participants = pd.concat([participants, response[1]], ignore_index=True)
+            participants = pd.concat(
+                [participants, response[1]], ignore_index=True)
             teams = pd.concat([teams, response[2]], ignore_index=True)
             matchID = response[3]
 
@@ -646,12 +647,14 @@ async def parse_gamedata(gameID, leagueID, engine):
     # Compeletes getDetails API calls asynchronously
     async with ClientSession() as session:
         tasks = [
-                asyncio.ensure_future(lolesports.getDetails(session, gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ")))
-                for i in range(num_periods)
-            ]
-        for response in await asyncio.gather(*tasks):            
-            participants_details = pd.concat([participants_details, response], ignore_index=True)
-            
+            asyncio.ensure_future(lolesports.getDetails(
+                session, gameID, (timestamp + timedelta(seconds=i*10)).strftime("%Y-%m-%dT%H:%M:%SZ")))
+            for i in range(num_periods)
+        ]
+        for response in await asyncio.gather(*tasks):
+            participants_details = pd.concat(
+                [participants_details, response], ignore_index=True)
+
     # Sort dataframes by timestamp
     participants.sort_values(
         ['timestamp', 'participantId'], ignore_index=True, inplace=True)
@@ -659,7 +662,7 @@ async def parse_gamedata(gameID, leagueID, engine):
         ['timestamp'], ignore_index=True, inplace=True)
     participants_details.sort_values(
         ['timestamp', 'participantId'], ignore_index=True, inplace=True)
-    
+
     participants['multikill'] = 1
 
     # The next bunch of code is a bunch of messy vectorization, to determine when double, triples, quadras, pentas happen
@@ -668,7 +671,6 @@ async def parse_gamedata(gameID, leagueID, engine):
     participants['kill_event'] = participants.groupby(
         'participantId')['kills'].diff().fillna(0).astype(bool)
 
-
     participants.loc[(participants['kill_event']), 'kill_count'] = 1
 
     # Calculates the time inbetween kills
@@ -676,7 +678,7 @@ async def parse_gamedata(gameID, leagueID, engine):
         'participantId')['timestamp'].diff().fillna(pd.Timedelta(0, unit='S'))
 
     # First pass detection for when kills need reset
-    # Since single, double, triple, quadra have the same requirements and penta's are different 
+    # Since single, double, triple, quadra have the same requirements and penta's are different
     participants.loc[(participants['kill_event']) & (
         participants['kill_timeout'] > timedelta(seconds=30)), 'kill_reset'] = 1
 
@@ -702,16 +704,16 @@ async def parse_gamedata(gameID, leagueID, engine):
     code_2 = df['code'].unique()[1]
     df['code'] = df['code'].map({code_1: code_2, code_2: code_1})
 
-    # Add to participant dataframe 
+    # Add to participant dataframe
     participants = pd.merge(participants, df, on=['timestamp', 'code'])
     participants.drop_duplicates(inplace=True)
 
     # Second pass resets
     # Single, double, triple, quadra resets
-    # If the time inbetween kills has been more than 10s 
+    # If the time inbetween kills has been more than 10s
     participants.loc[(participants['kill_event']) & (participants['multikill'] <= 4) & (
         participants['kill_timeout'] > timedelta(seconds=10)), 'kill_reset'] = 1
-    
+
     # Penta reset
     # If time inbetween kills has been more than 30s or someone on the enemy team has respawned
     participants.loc[(participants['kill_event']) & (participants['multikill'] == 5) & (
@@ -723,22 +725,24 @@ async def parse_gamedata(gameID, leagueID, engine):
 
     participants['multikill'] = participants[participants['kill_event']].groupby(
         ['participantId', 'cumsum'])['kill_count'].cumsum()
-    
+
     participants['multikill'].fillna(0, inplace=True)
 
     # Onehot encode the multikills, 1 -> single, 2 -> double, 3 -> triple, 4 -> quadra, 5 -> penta
     participants = pd.get_dummies(participants, "kill", columns=['multikill'])
-    
+
     # Merge participant_details
     participants = participants.merge(participants_details, on=[
         'timestamp', 'participantId', 'kills', 'deaths', 'assists', 'creepScore', 'level', 'rfc460Timestamp'])
 
-    # Clean up participant dataframe, rename columns, sort, drop extra columns 
-    participants.rename(columns=rename_columns, inplace=True)
-    participants_details.sort_values(['timestamp', 'participantId'], inplace=True)
-    player_drop_columns = set(participants.columns.values) - set(rename_columns.values())
+    # Clean up participant dataframe, rename columns, sort, drop extra columns
+    participants.rename(columns=rename_player_columns, inplace=True)
+    participants_details.sort_values(
+        ['timestamp', 'participantId'], inplace=True)
+    player_drop_columns = set(participants.columns.values) - \
+        set(rename_player_columns.values())
     participants.drop(player_drop_columns, axis=1, inplace=True)
-    
+
     # cumulative sum for onehot encoded multikills
     multikill_columns = ['single', 'double', 'triple', 'quadra', 'penta']
 
@@ -765,11 +769,11 @@ async def parse_gamedata(gameID, leagueID, engine):
     # Some messy vectorization
     # Determine when first blood happens
     teams['first_blood'] = np.nan
-    
-    # Determine when kills happen  
+
+    # Determine when kills happen
     teams['kill_event'] = teams.groupby(
         'code')['totalKills'].diff().fillna(0).astype(bool)
-    
+
     # Determine when first blood happens
     teams.loc[(teams['kill_event']) & (teams[teams['kill_event']]['timestamp']
                                        == teams[teams['kill_event']]['timestamp'].min()), 'first_blood'] = 1
@@ -786,7 +790,7 @@ async def parse_gamedata(gameID, leagueID, engine):
         teams['gameState'] == 'finished'), 'win'] = 1
     teams.loc[(teams['win'] == 1) & (teams.timestamp.max() -
                                      teams.timestamp.min() < timedelta(minutes=30)), 'under_30'] = 1
-    
+
     # Calculate fantasy score
     team_weight_columns = ['num_dragons', 'barons',
                            'towers', 'first_blood', 'win', 'under_30']
@@ -795,11 +799,15 @@ async def parse_gamedata(gameID, leagueID, engine):
     teams['fantasy_score'] = teams[team_weight_columns].dot(team_weights)
 
     # Final dataframe clean up, rename columns, drop extra
-    team_rename_columns = {'gameState': 'game_state', 'totalGold': 'total_gold', 'totalKills': 'total_kills', "rfc460Timestamp": "rfc460timestamp"}
+    team_rename_columns = {'rfc460Timestamp': 'rfc460timestamp', 'gameState': 'game_state', 'totalGold': 'total_gold', 'inhibitors', 'inhibitors', 'towers': 'towers',
+                           'barons': 'barons', 'totalKills': 'total_kills', 'dragons': 'dragons', 'teamID': 'teamid', 'side': 'side', 'code': 'code', 'timestamp': 'timestamp',
+                           'gameid': 'gameid', 'num_dragons': 'num_dragons', 'win': 'win', 'under_30': 'under_30', 'first_blood': 'first_blood', 'fantasy_score': 'fantasy_score'}
+
     teams.rename(columns=team_rename_columns, inplace=True)
     teams.drop('kill_event', axis=1, inplace=True)
 
-    participants.drop_duplicates(['gameid', 'summoner_name', 'timestamp'], inplace=True)
+    participants.drop_duplicates(
+        ['gameid', 'summoner_name', 'timestamp'], inplace=True)
     teams.drop_duplicates(['timestamp', 'code', 'gameid'])
 
     participants.to_sql("player_gamedata", engine, "midbot", 'append', False)
@@ -810,6 +818,6 @@ async def parse_gamedata(gameID, leagueID, engine):
 if __name__ == "__main__":
     engine, Base = connect_database()
     loop = asyncio.get_event_loop()
-    future = asyncio.ensure_future(database_insert_gamedata(engine, Base, 104174992692075107))
+    future = asyncio.ensure_future(
+        database_insert_gamedata(engine, Base, 104174992692075107))
     loop.run_until_complete(future)
-    
