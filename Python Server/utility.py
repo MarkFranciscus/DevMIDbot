@@ -799,6 +799,9 @@ async def parse_gamedata(gameID, leagueID, engine):
     teams.rename(columns=team_rename_columns, inplace=True)
     teams.drop('kill_event', axis=1, inplace=True)
 
+    participants.drop_duplicates(['timestamp', 'participantid', 'gameid'], inplace=True)
+    teams.drop_duplicates(['timestamp', 'code', 'gameid'])
+
     participants.to_sql("player_gamedata", engine, "midbot", 'append', False)
     teams.to_sql("team_gamedata", engine, "midbot", 'append', False)
 
