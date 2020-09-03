@@ -826,6 +826,6 @@ if __name__ == "__main__":
     engine, Base = connect_database()
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(
-        parse_gamedata(104174992718816262, 98767991299243165, engine))
-    #     database_insert_gamedata(engine, Base, 104174992692075107))
+                database_insert_gamedata(engine, Base, 104174992692075107))
+        # parse_gamedata(104174992718816262, 98767991299243165, engine))
     loop.run_until_complete(future)
