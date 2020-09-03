@@ -394,7 +394,7 @@ def database_insert_gamedata(engine, Base, tournamentID):
     already_inserted = session.query(Player_Gamedata.gameid).distinct().all()
     already_inserted = list(set([x[0] for x in already_inserted]))
     today = datetime.now()
-    gameid_result = session.query(Tournament_Schedule.gameid, Tournament_Schedule.leagueid).join(
+    gameid_result = session.query(Tournament_Schedule.gameid, Tournaments.leagueid).join(
                                       Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
                                           Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
     
