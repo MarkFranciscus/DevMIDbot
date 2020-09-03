@@ -214,7 +214,7 @@ async def getWindow(session, gameID, starting_time=""):
         blue_team['code'] = metadata.code.unique()[1] 
 
         teams = pd.concat([red_team, blue_team], ignore_index=True)
-        teams['timestamp'] = pd.to_datetime(teams['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+        teams['timestamp'] = pd.to_datetime(teams['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ', exact=False)
 
         blue_participants = json_normalize(
             raw_data['frames'], ['blueTeam', 'participants'], ['rfc460Timestamp'])
@@ -224,7 +224,7 @@ async def getWindow(session, gameID, starting_time=""):
         participants = pd.concat(
             [blue_participants, red_participants], ignore_index=True)
         participants = pd.merge(participants, metadata, on='participantId')
-        participants['timestamp'] = pd.to_datetime(participants['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+        participants['timestamp'] = pd.to_datetime(participants['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ', exact=False)
         participants["gameid"] = gameID
         teams['gameid'] = gameID
         participants.drop('summonerName', axis=1, inplace=True)
