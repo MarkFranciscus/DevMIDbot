@@ -396,7 +396,7 @@ async def database_insert_gamedata(engine, Base, tournamentID):
     today = datetime.now()
     gameid_result = session.query(Tournament_Schedule.gameid, Tournaments.leagueid).join(
         Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
-        Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted), Tournament_Schedule.start_ts <= today)
+        Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted),  ~Tournament_Schedule.gameid.in_([104174992718816262]), Tournament_Schedule.start_ts <= today)
 
     for row in gameid_result:
         await parse_gamedata(row.gameid, row.leagueid, engine)
@@ -628,6 +628,10 @@ async def parse_gamedata(gameID, leagueID, engine):
     temp_max_ts = temp_max_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
     async with ClientSession() as session:
         _, _, x, _ = await lolesports.getWindow(session, gameID, temp_max_ts)
+    
+    if not teams["gameState"].str.contains('finished').any():
+        return
+
     max_ts = x["timestamp"].max().to_pydatetime()
     max_ts = round_time(max_ts)
 
@@ -681,7 +685,8 @@ async def parse_gamedata(gameID, leagueID, engine):
     # Calculates the time inbetween kills
     participants.loc[participants['kill_event'], 'kill_timeout'] = participants[participants['kill_event']].groupby(
         'participantId')['timestamp'].diff().fillna(pd.Timedelta(0, unit='S'))
-
+    print(participants[]['kill_event'])
+    
     # First pass detection for when kills need reset
     # Since single, double, triple, quadra have the same requirements and penta's are different
     participants.loc[(participants['kill_event']) & (
@@ -822,5 +827,6 @@ if __name__ == "__main__":
     engine, Base = connect_database()
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(
-        database_insert_gamedata(engine, Base, 104174992692075107))
+        parse_gamedata(104174992718816262, 98767991299243165, engine))
+    #     database_insert_gamedata(engine, Base, 104174992692075107))
     loop.run_until_complete(future)
