@@ -685,7 +685,6 @@ async def parse_gamedata(gameID, leagueID, engine):
     # Calculates the time inbetween kills
     participants.loc[participants['kill_event'], 'kill_timeout'] = participants[participants['kill_event']].groupby(
         'participantId')['timestamp'].diff().fillna(pd.Timedelta(0, unit='S'))
-    print(participants[]['kill_event'])
     
     # First pass detection for when kills need reset
     # Since single, double, triple, quadra have the same requirements and penta's are different
