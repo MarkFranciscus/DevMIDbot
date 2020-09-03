@@ -101,7 +101,7 @@ def connect_database():
     Base.prepare()
     logging.debug(f"{list(Base.classes)}")
     logging.info("Connected")
-    return Base, engine
+    return engine, Base
 
 
 def similar(string_1, string_2):
@@ -543,7 +543,7 @@ def update_predictions(engine):
     engine.execute(update_weekly_predictions)
 
 
-def update_winners(Base, engine):
+def update_winners(engine, Base):
     Tournaments = Base.classes.tournaments
     Tournament_Schedule = Base.classes.tournament_schedule
 
