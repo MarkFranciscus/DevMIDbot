@@ -607,7 +607,7 @@ async def parse_gamedata(gameID, leagueID, engine):
                       'criticalChance': 'critical_chance', 'attackSpeed': 'attack_speed', 'lifeSteal': 'life_steal',
                       'armor': 'armor', 'magicResistance': 'magic_resistance', 'tenacity': 'tenacity', "kill_1.0": "single", 
                       "kill_2.0": "double", "kill_3.0": "triple", "kill_4.0": "quadra", "kill_5.0": "penta", 
-                      "perkMetadata.perks": "runes", "abilities": "abilities"}
+                      "perkMetadata.perks": "runes", "abilities": "abilities", "rfc460Timestamp":"rfc460timestamp"}
 
     logging.info(f"Starting game {gameID}")
 
@@ -795,7 +795,7 @@ async def parse_gamedata(gameID, leagueID, engine):
     teams['fantasy_score'] = teams[team_weight_columns].dot(team_weights)
 
     # Final dataframe clean up, rename columns, drop extra
-    team_rename_columns = {'gameState': 'game_state', 'totalGold': 'total_gold', 'totalKills': 'total_kills'}
+    team_rename_columns = {'gameState': 'game_state', 'totalGold': 'total_gold', 'totalKills': 'total_kills', "rfc460Timestamp": "rfc460timestamp"}
     teams.rename(columns=team_rename_columns, inplace=True)
     teams.drop('kill_event', axis=1, inplace=True)
 
