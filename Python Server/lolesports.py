@@ -60,8 +60,8 @@ def getTournamentsForLeague(leagueId, hl="en-US"):
 
     tournaments = pd.DataFrame().from_dict(json_normalize(data))
     tournaments['startDate'] = pd.to_datetime(
-        tournaments['startDate'], utc=True)
-    tournaments['endDate'] = pd.to_datetime(tournaments['endDate'], utc=True)
+        tournaments['startDate'], infer_datetime_format=True).dt.tz_convert(None)
+    tournaments['endDate'] = pd.to_datetime(tournaments['endDate'], infer_datetime_format=True).dt.tz_convert(None)
     tournaments.columns = map(str.lower, tournaments.columns)
     return tournaments
 
@@ -214,9 +214,8 @@ async def getWindow(session, gameID, starting_time=""):
         blue_team['code'] = metadata.code.unique()[1] 
 
         teams = pd.concat([red_team, blue_team], ignore_index=True)
-        teams['timestamp'] = pd.to_datetime(teams['rfc460Timestamp'], infer_datetime_format=True)
-        # format='%Y-%m-%dT%H:%M:%S.%fZ', exact=False
-
+        teams['timestamp'] = pd.to_datetime(teams['rfc460Timestamp'], infer_datetime_format=True).dt.tz_convert(None)
+        # teams['timestamp'] = teams['timestamp'].dt.tz_convert(None)
         blue_participants = json_normalize(
             raw_data['frames'], ['blueTeam', 'participants'], ['rfc460Timestamp'])
         red_participants = json_normalize(
@@ -225,8 +224,8 @@ async def getWindow(session, gameID, starting_time=""):
         participants = pd.concat(
             [blue_participants, red_participants], ignore_index=True)
         participants = pd.merge(participants, metadata, on='participantId')
-        participants['timestamp'] = pd.to_datetime(participants['rfc460Timestamp'], infer_datetime_format=True)
-        # , format='%Y-%m-%dT%H:%M:%S.%fZ',
+        participants['timestamp'] = pd.to_datetime(participants['rfc460Timestamp'], infer_datetime_format=True).dt.tz_convert(None)
+        # participants['timestamp'] = participants['timestamp'].dt.tz_convert(None)
         participants["gameid"] = gameID
         teams['gameid'] = gameID
         participants.drop('summonerName', axis=1, inplace=True)
@@ -265,5 +264,5 @@ async def getDetails(session, gameID, timestamp="", participantIds=""):
         frames = raw_data["frames"]
         
         participant_data = json_normalize(frames, 'participants', 'rfc460Timestamp')
-        participant_data['timestamp'] = pd.to_datetime(participant_data['rfc460Timestamp'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+        participant_data['timestamp'] = pd.to_datetime(participant_data['rfc460Timestamp'], infer_datetime_format=True).dt.tz_convert(None)
         return participant_data
