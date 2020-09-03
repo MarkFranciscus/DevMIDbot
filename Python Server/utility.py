@@ -799,7 +799,7 @@ async def parse_gamedata(gameID, leagueID, engine):
     teams['fantasy_score'] = teams[team_weight_columns].dot(team_weights)
 
     # Final dataframe clean up, rename columns, drop extra
-    team_rename_columns = {'rfc460Timestamp': 'rfc460timestamp', 'gameState': 'game_state', 'totalGold': 'total_gold', 'inhibitors', 'inhibitors', 'towers': 'towers',
+    team_rename_columns = {'rfc460Timestamp': 'rfc460timestamp', 'gameState': 'game_state', 'totalGold': 'total_gold', 'inhibitors': 'inhibitors', 'towers': 'towers',
                            'barons': 'barons', 'totalKills': 'total_kills', 'dragons': 'dragons', 'teamID': 'teamid', 'side': 'side', 'code': 'code', 'timestamp': 'timestamp',
                            'gameid': 'gameid', 'num_dragons': 'num_dragons', 'win': 'win', 'under_30': 'under_30', 'first_blood': 'first_blood', 'fantasy_score': 'fantasy_score'}
 
