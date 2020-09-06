@@ -396,7 +396,11 @@ async def database_insert_gamedata(engine, Base, tournamentID):
     today = datetime.now()
     gameid_result = session.query(Tournament_Schedule.gameid, Tournaments.leagueid).join(
         Tournaments, Tournament_Schedule.tournamentid == Tournaments.tournamentid).filter(
-        Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", ~Tournament_Schedule.gameid.in_(already_inserted),  ~Tournament_Schedule.gameid.in_([104174992718816262]), Tournament_Schedule.start_ts <= today)
+        Tournament_Schedule.tournamentid == tournamentID, Tournament_Schedule.state != "finished", 
+        ~Tournament_Schedule.gameid.in_(already_inserted),  
+        ~Tournament_Schedule.gameid.in_([104174992718816262]), 
+        Tournament_Schedule.start_ts <= today,
+        Tournament_Schedule.blockname.like('%Week%'))
 
     for row in gameid_result:
         await parse_gamedata(row.gameid, row.leagueid, engine)
